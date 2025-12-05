@@ -1,11 +1,16 @@
 /*
- * Ejemplo de uso de la clase Coche
+ * Ejemplo de uso de la clase Coche con servidor web
  * Control automático de distancia con sensores
+ * Visualización web de datos en tiempo real
  */
 
 #include "Coche.h"
 
-// Definir pines para LOLIN D1 ESP-WROOM-02 (ESP8266)
+// ========== CONFIGURACIÓN WIFI ==========
+const char* WIFI_SSID = "yiyiyi";        
+const char* WIFI_PASSWORD = "xabicrack"; 
+
+// ========== DEFINIR PINES PARA LOLIN D1 ESP-WROOM-02 (ESP8266) ==========
 // Driver L9110S - Motor Izquierdo (Motor 1)
 #define MOTOR1_A D1  // GPIO5
 #define MOTOR1_B D2  // GPIO4
@@ -30,77 +35,77 @@ Coche miCoche(MOTOR1_A, MOTOR1_B, MOTOR2_A, MOTOR2_B,
 
 void setup() {
   // Inicializar comunicación serial
-  Serial.begin(9600);
-  Serial.println("Iniciando sistema del coche...");
+  Serial.begin(115200);
+  Serial.println("\n\nIniciando sistema del coche...");
   
   // Inicializar el coche
   miCoche.inicializar();
   
-  // Configurar distancia objetivo (10 cm por defecto)
-  miCoche.setDistanciaObjetivo(10.0);
+  // Configurar rango de distancia: 18-22 cm (zona muerta)
+  miCoche.setRangoDistancia(18.0, 22.0);
   
-  // Configurar constante proporcional (ajustar según necesidad)
-  miCoche.setConstanteProporcional(15.0);
+  // Configurar constante proporcional más suave
+  miCoche.setConstanteProporcional(8.0);
   
-  Serial.println("Sistema inicializado");
-  delay(2000);
+  // Conectar a WiFi
+  Serial.println("\n=== CONEXIÓN WIFI ===");
+  miCoche.inicializarWiFi(WIFI_SSID, WIFI_PASSWORD);
+  
+  // Iniciar servidor web
+  Serial.println("\n=== SERVIDOR WEB ===");
+  miCoche.inicializarServidorWeb();
+  
+  Serial.println("\n=== SISTEMA LISTO ===");
+  Serial.println("Abre tu navegador y visita la IP mostrada arriba");
+  Serial.println("====================================\n");
+  
+  delay(1000);
 }
 
 void loop() {
-  // Leer sensores
+  // Atender peticiones web
+  miCoche.atenderClientes();
+  
+  // Control automático de distancia (18-22 cm con zona muerta)
+  miCoche.controlarDistancia();
+  
+  // Pequeña pausa para estabilidad
+  delay(50);
+}
+
+// ========== FUNCIONES DE EJEMPLO (comentadas) ==========
+/*
+// Para ver datos en monitor serial
+void mostrarDatosSerial() {
   float distancia = miCoche.leerDistancia();
   float temperatura = miCoche.leerTemperatura();
   int estadoLuz = miCoche.leerLuz();
   
-  // Mostrar lecturas en el monitor serial
   Serial.print("Distancia: ");
   Serial.print(distancia);
   Serial.print(" cm | Temperatura: ");
   Serial.print(temperatura);
   Serial.print(" °C | Luz: ");
   Serial.println(estadoLuz ? "Detectada" : "Oscuro");
-  
-  // Control automático de distancia
-  miCoche.controlarDistancia();
-  
-  // Pequeña pausa para estabilidad
-  delay(100);
 }
 
-// Funciones adicionales de ejemplo (comentadas)
-/*
+// Movimientos manuales
 void ejemplo_movimientos_manuales() {
-  // Avanzar
   miCoche.avanzar(150);
   delay(2000);
   
-  // Detener
   miCoche.detener();
   delay(1000);
   
-  // Retroceder
   miCoche.retroceder(150);
   delay(2000);
   
-  // Girar derecha
   miCoche.girarDerecha(150);
   delay(1000);
   
-  // Girar izquierda
   miCoche.girarIzquierda(150);
   delay(1000);
   
-  // Detener
   miCoche.detener();
-}
-
-void ejemplo_lectura_sensores() {
-  float dist = miCoche.leerDistancia();
-  float temp = miCoche.leerTemperatura();
-  int luz = miCoche.leerLuz();
-  
-  Serial.print("Distancia: "); Serial.print(dist); Serial.println(" cm");
-  Serial.print("Temperatura: "); Serial.print(temp); Serial.println(" °C");
-  Serial.print("Estado luz: "); Serial.println(luz);
 }
 */

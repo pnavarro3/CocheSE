@@ -2,6 +2,8 @@
 #define COCHE_H
 
 #include <Arduino.h>
+#include <ESP8266WiFi.h>
+#include <ESP8266WebServer.h>
 
 class Coche {
 private:
@@ -23,10 +25,23 @@ private:
     
     // Variables de control
     float distanciaObjetivo;
+    float distanciaMin;  // Límite inferior zona muerta
+    float distanciaMax;  // Límite superior zona muerta
     float kp; // Constante proporcional para control
+    
+    // Servidor web
+    ESP8266WebServer* servidor;
+    
+    // Variables para datos de sensores
+    float ultimaDistancia;
+    float ultimaTemperatura;
+    int ultimaLuz;
+    String estadoMovimiento;  // "PARADO", "AVANZANDO", "RETROCEDIENDO"
+    unsigned long ultimaLecturaDistancia;
     
     // Funciones privadas
     void moverMotores(int velocidadIzq, int velocidadDer);
+    float leerDistanciaFiable();
     void detenerMotores();
     
 public:
@@ -49,10 +64,18 @@ public:
     float leerDistancia();
     float leerTemperatura();
     int leerLuz();
+    String obtenerEstadoMovimiento();
     
     // Configuración
     void setDistanciaObjetivo(float distancia);
+    void setRangoDistancia(float minDist, float maxDist);
     void setConstanteProporcional(float kp_value);
+    
+    // WiFi y servidor web
+    void inicializarWiFi(const char* ssid, const char* password);
+    void inicializarServidorWeb();
+    void atenderClientes();
+    String obtenerDatosJSON();
 };
 
 #endif
