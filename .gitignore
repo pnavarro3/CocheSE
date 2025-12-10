@@ -1,0 +1,17 @@
+# ==========================================
+# CocheSE - Ignorar solo archivos generados
+# ==========================================
+
+# Arduino IDE - Compilación de .ino, .cpp, .h
+*.o
+*.a
+*.elf
+*.hex
+build/
+
+# VS Code (si se usa)
+.vscode/
+
+# Sistema Operativo
+.DS_Store
+Thumbs.db
