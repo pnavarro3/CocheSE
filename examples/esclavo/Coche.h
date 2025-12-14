@@ -6,15 +6,6 @@
 #include <ESP8266WebServer.h>
 #include <espnow.h>
 
-// Estructura de datos ESP-NOW
-typedef struct struct_mensaje {
-    int velocidadIzq;
-    int velocidadDer;
-    char comando[20];
-    int luminosidad;
-    float distancia;
-} struct_mensaje;
-
 class Coche {
 private:
     int motor1A, motor1B, motor2A, motor2B;
@@ -23,13 +14,15 @@ private:
     ESP8266WebServer* servidor;
     float ultimaDistancia;
     int ultimaLuz;
-    String estadoMovimiento;
+    char estadoMovimiento[20];
     unsigned long ultimaLecturaDistancia;
     float distanciaRecibida;
     int luminosidadRecibida;
     bool datosRecibidos, esMaestro;
+    bool nuevosDatosESPNow;
     uint8_t macRemota[6];
     int ultimaVelocidadIzq, ultimaVelocidadDer;
+    int velocidadPreviaIzq, velocidadPreviaDer;  // Para detectar arranque
     bool espnowInicializado, lucesAutomaticas, estadoLuces;
     unsigned long ultimoEnvio;
     
@@ -55,7 +48,8 @@ public:
     void inicializarESPNowMaestro(uint8_t macEsclavo[6]);
     void inicializarESPNowEsclavo(uint8_t macMaestro[6]);
     void enviarComandoESPNow();
-    void procesarComandoRecibido(struct_mensaje* datos);
+    void procesarMensajeRecibido(const char* mensaje);
+    void ejecutarComandoRecibido();
     void controlarLucesAutomaticas();
     void encenderLuces();
     void apagarLuces();

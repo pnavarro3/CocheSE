@@ -43,15 +43,20 @@ Coche miCoche(MOTOR1_A, MOTOR1_B, MOTOR2_A, MOTOR2_B,
 
 void setup() {
   Serial.begin(115200);
+  delay(100);
   
   // Inicializar hardware
   miCoche.inicializar();
   
+  // Configurar control de distancia: zona muerta 15-20 cm (IGUAL QUE MAESTRO)
+  miCoche.setRangoDistancia(15.0, 20.0);
+  miCoche.setConstanteProporcional(8.0);
+  
+  // Conectar a WiFi PRIMERO
+  miCoche.inicializarWiFi(WIFI_SSID, WIFI_PASSWORD);
+  
   // Inicializar ESP-NOW como ESCLAVO (mostrará su MAC)
   miCoche.inicializarESPNowEsclavo(MAC_MAESTRO);
-  
-  // Conectar a WiFi
-  miCoche.inicializarWiFi(WIFI_SSID, WIFI_PASSWORD);
   
   // Iniciar servidor web
   miCoche.inicializarServidorWeb();
@@ -60,11 +65,14 @@ void setup() {
 }
 
 void loop() {
+  // Ejecutar comandos recibidos del maestro
+  miCoche.ejecutarComandoRecibido();
+  
   // Servidor web
   miCoche.atenderClientes();
   
   // Control de luces según datos del maestro
   miCoche.controlarLucesAutomaticas();
   
-  delay(50);
+  delay(10);
 }

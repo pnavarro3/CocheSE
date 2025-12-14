@@ -23,7 +23,7 @@ const char* WIFI_PASSWORD = "xabicrack";
 
 // ========== CONFIGURACIÓN ESP-NOW ==========
 // IMPORTANTE: Pon aquí la MAC del ESCLAVO (se muestra en su Serial Monitor)
-uint8_t MAC_ESCLAVO[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+uint8_t MAC_ESCLAVO[] = {0x5C, 0xCF, 0x7F, 0xEC, 0x8F, 0xEE};
 
 // ========== PINES LOLIN D1 ESP-WROOM-02 ==========
 #define MOTOR1_A D1  // GPIO5
@@ -41,19 +41,20 @@ Coche miCoche(MOTOR1_A, MOTOR1_B, MOTOR2_A, MOTOR2_B,
 
 void setup() {
   Serial.begin(115200);
+  delay(100);
   
   // Inicializar hardware
   miCoche.inicializar();
   
-  // Configurar control de distancia: zona muerta 18-22 cm
-  miCoche.setRangoDistancia(18.0, 22.0);
+  // Configurar control de distancia: zona muerta 15-20 cm
+  miCoche.setRangoDistancia(15.0, 20.0);
   miCoche.setConstanteProporcional(8.0);
+  
+  // Conectar a WiFi PRIMERO
+  miCoche.inicializarWiFi(WIFI_SSID, WIFI_PASSWORD);
   
   // Inicializar ESP-NOW como MAESTRO
   miCoche.inicializarESPNowMaestro(MAC_ESCLAVO);
-  
-  // Conectar a WiFi
-  miCoche.inicializarWiFi(WIFI_SSID, WIFI_PASSWORD);
   
   // Iniciar servidor web
   miCoche.inicializarServidorWeb();

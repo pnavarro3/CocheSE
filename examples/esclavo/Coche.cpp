@@ -11,10 +11,12 @@ Coche::Coche(int m1A, int m1B, int m2A, int m2B,
     distanciaMin = 18.0; distanciaMax = 22.0; kp = 8.0;
     servidor = nullptr;
     ultimaDistancia = 0; ultimaLuz = 0;
-    estadoMovimiento = "PARADO"; ultimaLecturaDistancia = 0;
+    strcpy(estadoMovimiento, "PARADO"); ultimaLecturaDistancia = 0;
     luminosidadRecibida = 0; distanciaRecibida = 0;
     datosRecibidos = false;
     esMaestro = false; ultimaVelocidadIzq = 0; ultimaVelocidadDer = 0;
+    nuevosDatosESPNow = false;
+    velocidadPreviaIzq = 0; velocidadPreviaDer = 0;
     espnowInicializado = false; lucesAutomaticas = true; estadoLuces = false;
     ultimoEnvio = 0;
     memset(macRemota, 0, 6);
@@ -72,52 +74,107 @@ void Coche::controlarDistancia() {
     
     float distanciaActual = leerDistancia();
     
+    // Zona muerta: entre 15-20cm → PARADO
     if (distanciaActual >= distanciaMin && distanciaActual <= distanciaMax) {
         detenerMotores();
-        estadoMovimiento = "PARADO";
+        strcpy(estadoMovimiento, "PARADO");
         return;
     }
     
-    float error;
-    if (distanciaActual < distanciaMin) {
-        error = distanciaActual - distanciaMin;
-        estadoMovimiento = "RETROCEDIENDO";
-    } else {
-        error = distanciaActual - distanciaMax;
-        estadoMovimiento = "AVANZANDO";
-    }
+    int velocidad = 0;
     
-    int velocidad = -(int)(kp * error);
-    if (velocidad > 255) velocidad = 255;
-    if (velocidad < -255) velocidad = -255;
-    if (velocidad > 0 && velocidad < 120) velocidad = 120;
-    if (velocidad < 0 && velocidad > -120) velocidad = -120;
+    // RETROCEDER: distancia < 15cm
+    // A 15cm → 80 PWM, A 5cm → 180 PWM
+    if (distanciaActual < distanciaMin) {
+        strcpy(estadoMovimiento, "RETROCEDIENDO");
+        
+        if (distanciaActual <= 5.0) {
+            velocidad = 180;
+        } else if (distanciaActual >= 15.0) {
+            velocidad = 80;
+        } else {
+            // Interpolación lineal: v = 80 + (15 - dist) * (180 - 80) / (15 - 5)
+            velocidad = 80 + (int)((15.0 - distanciaActual) * 100.0 / 10.0);
+        }
+    }
+    // AVANZAR: distancia > 20cm
+    // A 20cm → 100 PWM, A 40cm → 255 PWM
+    else {
+        strcpy(estadoMovimiento, "AVANZANDO");
+        
+        if (distanciaActual >= 40.0) {
+            velocidad = -255;
+        } else if (distanciaActual <= 20.0) {
+            velocidad = -100;
+        } else {
+            // Interpolación lineal: v = 100 + (dist - 20) * (255 - 100) / (40 - 20)
+            velocidad = -(100 + (int)((distanciaActual - 20.0) * 155.0 / 20.0));
+        }
+    }
     
     moverMotores(velocidad, velocidad);
 }
 
 // Mover motores
 void Coche::moverMotores(int velocidadIzq, int velocidadDer) {
+    // BOOST: Impulso inicial si el motor estaba parado
+    bool boostIzq = (ultimaVelocidadIzq == 0 && velocidadIzq != 0);
+    bool boostDer = (ultimaVelocidadDer == 0 && velocidadDer != 0);
+    
+    // Motor izquierdo con boost
+    if (velocidadIzq >= 0) {
+        int velocidadReal = boostIzq ? 210 : velocidadIzq;
+        analogWrite(motor1A, velocidadReal); 
+        analogWrite(motor1B, 0);
+    } else {
+        int velocidadReal = boostIzq ? 210 : -velocidadIzq;
+        analogWrite(motor1A, 0); 
+        analogWrite(motor1B, velocidadReal);
+    }
+    
+    // Motor derecho con boost
+    if (velocidadDer >= 0) {
+        int velocidadReal = boostDer ? 210 : velocidadDer;
+        analogWrite(motor2A, velocidadReal); 
+        analogWrite(motor2B, 0);
+    } else {
+        int velocidadReal = boostDer ? 210 : -velocidadDer;
+        analogWrite(motor2A, 0); 
+        analogWrite(motor2B, velocidadReal);
+    }
+    
+    // Si aplicamos boost, esperar y luego aplicar velocidad real
+    if (boostIzq || boostDer) {
+        delay(100);
+        
+        if (velocidadIzq >= 0) {
+            analogWrite(motor1A, velocidadIzq); 
+            analogWrite(motor1B, 0);
+        } else {
+            analogWrite(motor1A, 0); 
+            analogWrite(motor1B, -velocidadIzq);
+        }
+        
+        if (velocidadDer >= 0) {
+            analogWrite(motor2A, velocidadDer); 
+            analogWrite(motor2B, 0);
+        } else {
+            analogWrite(motor2A, 0); 
+            analogWrite(motor2B, -velocidadDer);
+        }
+    }
+    
+    // Guardar velocidades actuales para la próxima vez
     ultimaVelocidadIzq = velocidadIzq;
     ultimaVelocidadDer = velocidadDer;
-    
-    if (velocidadIzq >= 0) {
-        analogWrite(motor1A, velocidadIzq); analogWrite(motor1B, 0);
-    } else {
-        analogWrite(motor1A, 0); analogWrite(motor1B, -velocidadIzq);
-    }
-    
-    if (velocidadDer >= 0) {
-        analogWrite(motor2A, velocidadDer); analogWrite(motor2B, 0);
-    } else {
-        analogWrite(motor2A, 0); analogWrite(motor2B, -velocidadDer);
-    }
 }
 
 // Detener motores
 void Coche::detenerMotores() {
     analogWrite(motor1A, 0); analogWrite(motor1B, 0);
     analogWrite(motor2A, 0); analogWrite(motor2B, 0);
+    ultimaVelocidadIzq = 0;
+    ultimaVelocidadDer = 0;
 }
 
 void Coche::detener() {
@@ -218,7 +275,7 @@ String Coche::obtenerDatosJSON() {
     String json = "{";
     json += "\"distancia\":" + String(dist, 2) + ",";
     json += "\"luz\":" + String(luz) + ",";
-    json += "\"estado\":\"" + estadoMovimiento + "\"";
+    json += "\"estado\":\"" + String(estadoMovimiento) + "\"";
     json += "}";
     return json;
 }
@@ -226,13 +283,15 @@ String Coche::obtenerDatosJSON() {
 // ========== ESP-NOW ==========
 
 void OnDataSent(uint8_t *mac_addr, uint8_t sendStatus) {
-    // Callback de envío (opcional)
+    // Callback de envío
 }
 
 void OnDataRecv(uint8_t *mac_addr, uint8_t *incomingData, uint8_t len) {
-    if (instanciaCocheGlobal != nullptr) {
-        struct_mensaje* datos = (struct_mensaje*)incomingData;
-        instanciaCocheGlobal->procesarComandoRecibido(datos);
+    if (instanciaCocheGlobal != nullptr && len > 0) {
+        char mensaje[200];
+        memcpy(mensaje, incomingData, len);
+        mensaje[len] = '\0';
+        instanciaCocheGlobal->procesarMensajeRecibido(mensaje);
     }
 }
 
@@ -258,43 +317,81 @@ void Coche::inicializarESPNowEsclavo(uint8_t macMaestro[6]) {
     esMaestro = false;
     memcpy(macRemota, macMaestro, 6);
     
-    WiFi.mode(WIFI_STA);
-    if (esp_now_init() != 0) return;
+    // Ya está en modo STA por WiFi
+    if (esp_now_init() != 0) {
+        Serial.println("Error al inicializar ESP-NOW");
+        return;
+    }
     
     espnowInicializado = true;
     esp_now_set_self_role(ESP_NOW_ROLE_SLAVE);
     esp_now_register_recv_cb(OnDataRecv);
     esp_now_add_peer(macRemota, ESP_NOW_ROLE_CONTROLLER, 1, NULL, 0);
-    
-    Serial.print("Mi MAC (ESCLAVO): ");
-    Serial.println(WiFi.macAddress());
 }
 
-// Enviar comando (solo maestro)
+// Enviar comando (no usado en esclavo)
 void Coche::enviarComandoESPNow() {
-    if (!esMaestro || !espnowInicializado) return;
-    if (millis() - ultimoEnvio < 100) return; // Throttling
-    
-    struct_mensaje mensaje;
-    mensaje.velocidadIzq = ultimaVelocidadIzq;
-    mensaje.velocidadDer = ultimaVelocidadDer;
-    strcpy(mensaje.comando, estadoMovimiento.c_str());
-    mensaje.luminosidad = leerLuz();
-    mensaje.distancia = leerDistancia();
-    
-    esp_now_send(macRemota, (uint8_t*)&mensaje, sizeof(mensaje));
-    ultimoEnvio = millis();
+    // El esclavo no envía comandos
 }
 
-// Procesar comando recibido (solo esclavo)
-void Coche::procesarComandoRecibido(struct_mensaje* datos) {
-    if (esMaestro) return; // Solo el esclavo procesa comandos
+// Procesar mensaje recibido (solo esclavo)
+void Coche::procesarMensajeRecibido(const char* mensaje) {
+    if (esMaestro) return;
     
-    moverMotores(datos->velocidadIzq, datos->velocidadDer);
-    estadoMovimiento = String(datos->comando);
-    luminosidadRecibida = datos->luminosidad;
-    distanciaRecibida = datos->distancia;
-    datosRecibidos = true;
+    int luz;
+    float dist;
+    
+    if (sscanf(mensaje, "luz=%d,dist=%f", &luz, &dist) == 2) {
+        luminosidadRecibida = luz;
+        distanciaRecibida = dist;
+        datosRecibidos = true;
+        nuevosDatosESPNow = true;
+    }
+}
+
+// Ejecutar comando recibido (llamar desde loop)
+void Coche::ejecutarComandoRecibido() {
+    if (!nuevosDatosESPNow || esMaestro) return;
+    
+    nuevosDatosESPNow = false;
+    
+    float distanciaActual = distanciaRecibida;
+    
+    // Zona muerta: entre 15-20cm → PARADO
+    if (distanciaActual >= distanciaMin && distanciaActual <= distanciaMax) {
+        detenerMotores();
+        strcpy(estadoMovimiento, "PARADO");
+        return;
+    }
+    
+    int velocidad = 0;
+    
+    // RETROCEDER: distancia < 15cm (80-180 PWM)
+    if (distanciaActual < distanciaMin) {
+        strcpy(estadoMovimiento, "RETROCEDIENDO");
+        
+        if (distanciaActual <= 5.0) {
+            velocidad = 180;
+        } else if (distanciaActual >= 15.0) {
+            velocidad = 80;
+        } else {
+            velocidad = 80 + (int)((15.0 - distanciaActual) * 100.0 / 10.0);
+        }
+    }
+    // AVANZAR: distancia > 20cm (100-255 PWM)
+    else {
+        strcpy(estadoMovimiento, "AVANZANDO");
+        
+        if (distanciaActual >= 40.0) {
+            velocidad = -255;
+        } else if (distanciaActual <= 20.0) {
+            velocidad = -100;
+        } else {
+            velocidad = -(100 + (int)((distanciaActual - 20.0) * 155.0 / 20.0));
+        }
+    }
+    
+    moverMotores(velocidad, velocidad);
 }
 
 // Control de luces
