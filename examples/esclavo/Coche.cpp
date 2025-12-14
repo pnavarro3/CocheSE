@@ -16,7 +16,6 @@ Coche::Coche(int m1A, int m1B, int m2A, int m2B,
     datosRecibidos = false;
     esMaestro = false; ultimaVelocidadIzq = 0; ultimaVelocidadDer = 0;
     nuevosDatosESPNow = false;
-    velocidadPreviaIzq = 0; velocidadPreviaDer = 0;
     espnowInicializado = false; lucesAutomaticas = true; estadoLuces = false;
     ultimoEnvio = 0;
     memset(macRemota, 0, 6);

@@ -66,7 +66,7 @@ void loop() {
   // Servidor web
   miCoche.atenderClientes();
   
-  // Control automático de distancia (18-22 cm)
+  // Control automático de distancia (15-20 cm)
   miCoche.controlarDistancia();
   
   // Control de luces según sensor

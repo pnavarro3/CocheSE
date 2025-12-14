@@ -21,7 +21,6 @@ private:
     bool datosRecibidos, esMaestro;
     uint8_t macRemota[6];
     int ultimaVelocidadIzq, ultimaVelocidadDer;
-    int velocidadPreviaIzq, velocidadPreviaDer;  // Para detectar arranque
     bool espnowInicializado, lucesAutomaticas, estadoLuces;
     unsigned long ultimoEnvio;
     
