@@ -232,7 +232,7 @@ void Coche::inicializarServidorWeb() {
         html += "<script>";
         html += "function actualizar(){fetch('/datos').then(r=>r.json()).then(data=>{";
         html += "document.getElementById('distancia').innerHTML=data.distancia.toFixed(1)+' <span class=\"unit\">cm</span>';";
-        html += "document.getElementById('luz').innerHTML=data.luz?'☀️ Detectada':'🌙 Oscuro';";
+        html += "document.getElementById('luz').innerHTML=data.luz?'☀️ Claro':'🌙 Oscuro';";
         html += "var estadoDiv=document.getElementById('estado');";
         html += "estadoDiv.className='card estado '+data.estado.toLowerCase();";
         html += "var icono=data.estado==='AVANZANDO'?'⬆️':(data.estado==='RETROCEDIENDO'?'⬇️':'⏸️');";
@@ -316,7 +316,7 @@ void Coche::inicializarESPNowMaestro(uint8_t macEsclavo[6]) {
 // Enviar comando (solo maestro)
 void Coche::enviarComandoESPNow() {
     if (!esMaestro || !espnowInicializado) return;
-    if (millis() - ultimoEnvio < 100) return;
+    if (millis() - ultimoEnvio < 20) return;
     
     char mensaje[200];
     snprintf(mensaje, sizeof(mensaje), "luz=%d,dist=%.1f",
@@ -343,16 +343,27 @@ void Coche::controlarLucesAutomaticas() {
         lecturaLuz = luminosidadRecibida;
     }
     
-    if (lecturaLuz == 0 && !estadoLuces) encenderLuces();
-    else if (lecturaLuz == 1 && estadoLuces) apagarLuces();
+    // Solo cambiar si han pasado 5 segundos desde el último cambio
+    if (millis() - ultimoCambioLuces < 5000) return;
+    
+    if (lecturaLuz == 1 && !estadoLuces) encenderLuces();
+    else if (lecturaLuz == 0 && estadoLuces) apagarLuces();
 }
 
 void Coche::encenderLuces() {
-    if (pinLuces >= 0) { digitalWrite(pinLuces, HIGH); estadoLuces = true; }
+    if (pinLuces >= 0) { 
+        digitalWrite(pinLuces, HIGH); 
+        estadoLuces = true;
+        ultimoCambioLuces = millis();
+    }
 }
 
 void Coche::apagarLuces() {
-    if (pinLuces >= 0) { digitalWrite(pinLuces, LOW); estadoLuces = false; }
+    if (pinLuces >= 0) { 
+        digitalWrite(pinLuces, LOW); 
+        estadoLuces = false;
+        ultimoCambioLuces = millis();
+    }
 }
 
 bool Coche::obtenerEstadoLuces() {

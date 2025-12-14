@@ -31,9 +31,9 @@ uint8_t MAC_MAESTRO[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 #define MOTOR1_B D2  // GPIO4
 #define MOTOR2_A D3  // GPIO0
 #define MOTOR2_B D4  // GPIO2
-// NO conectar sensores en el esclavo (usa -1)
-#define TRIG_PIN -1  // Sin sensor de distancia
-#define ECHO_PIN -1
+// Sensor de seguridad del esclavo
+#define TRIG_PIN D5  // GPIO14 - Sensor ultrasonidos seguridad
+#define ECHO_PIN D6  // GPIO12 - CON DIVISOR DE VOLTAJE
 #define LIGHT_PIN -1 // Sin sensor de luz
 #define LUCES_PIN D8 // GPIO15 - LEDs (opcional)
 
@@ -74,5 +74,5 @@ void loop() {
   // Control de luces según datos del maestro
   miCoche.controlarLucesAutomaticas();
   
-  delay(10);
+  yield();
 }

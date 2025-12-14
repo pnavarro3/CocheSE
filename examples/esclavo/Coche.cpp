@@ -232,7 +232,7 @@ void Coche::inicializarServidorWeb() {
         html += "<script>";
         html += "function actualizar(){fetch('/datos').then(r=>r.json()).then(data=>{";
         html += "document.getElementById('distancia').innerHTML=data.distancia.toFixed(1)+' <span class=\"unit\">cm</span>';";
-        html += "document.getElementById('luz').innerHTML=data.luz?'☀️ Detectada':'🌙 Oscuro';";
+        html += "document.getElementById('luz').innerHTML=data.luz?'☀️ Claro':'🌙 Oscuro';";
         html += "var estadoDiv=document.getElementById('estado');";
         html += "estadoDiv.className='card estado '+data.estado.toLowerCase();";
         html += "var icono=data.estado==='AVANZANDO'?'⬆️':(data.estado==='RETROCEDIENDO'?'⬇️':'⏸️');";
@@ -354,6 +354,21 @@ void Coche::ejecutarComandoRecibido() {
     
     nuevosDatosESPNow = false;
     
+    // SEGURIDAD: Lectura rápida del sensor propio (sin promedios)
+    if (trigPin >= 0 && echoPin >= 0) {
+        digitalWrite(trigPin, LOW); delayMicroseconds(2);
+        digitalWrite(trigPin, HIGH); delayMicroseconds(10);
+        digitalWrite(trigPin, LOW);
+        long duracion = pulseIn(echoPin, HIGH, 10000);
+        float distanciaPropia = duracion * 0.034 / 2.0;
+        
+        if (distanciaPropia > 2 && distanciaPropia < 5.0) {
+            detenerMotores();
+            strcpy(estadoMovimiento, "DETENIDO");
+            return;
+        }
+    }
+    
     float distanciaActual = distanciaRecibida;
     
     // Zona muerta: entre 15-20cm → PARADO
@@ -405,16 +420,27 @@ void Coche::controlarLucesAutomaticas() {
         lecturaLuz = luminosidadRecibida;
     }
     
-    if (lecturaLuz == 0 && !estadoLuces) encenderLuces();
-    else if (lecturaLuz == 1 && estadoLuces) apagarLuces();
+    // Solo cambiar si han pasado 5 segundos desde el último cambio
+    if (millis() - ultimoCambioLuces < 5000) return;
+    
+    if (lecturaLuz == 1 && !estadoLuces) encenderLuces();
+    else if (lecturaLuz == 0 && estadoLuces) apagarLuces();
 }
 
 void Coche::encenderLuces() {
-    if (pinLuces >= 0) { digitalWrite(pinLuces, HIGH); estadoLuces = true; }
+    if (pinLuces >= 0) { 
+        digitalWrite(pinLuces, HIGH); 
+        estadoLuces = true;
+        ultimoCambioLuces = millis();
+    }
 }
 
 void Coche::apagarLuces() {
-    if (pinLuces >= 0) { digitalWrite(pinLuces, LOW); estadoLuces = false; }
+    if (pinLuces >= 0) { 
+        digitalWrite(pinLuces, LOW); 
+        estadoLuces = false;
+        ultimoCambioLuces = millis();
+    }
 }
 
 bool Coche::obtenerEstadoLuces() {

@@ -72,8 +72,8 @@ void loop() {
   // Control de luces según sensor
   miCoche.controlarLucesAutomaticas();
   
-  // Enviar comandos al esclavo cada 100ms
+  // Enviar comandos al esclavo cada 20ms
   miCoche.enviarComandoESPNow();
   
-  delay(50);
+  delay(10);
 }

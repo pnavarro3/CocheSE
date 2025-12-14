@@ -23,6 +23,7 @@ private:
     int ultimaVelocidadIzq, ultimaVelocidadDer;
     bool espnowInicializado, lucesAutomaticas, estadoLuces;
     unsigned long ultimoEnvio;
+    unsigned long ultimoCambioLuces;
     
     void moverMotores(int velocidadIzq, int velocidadDer);
     void detenerMotores();
