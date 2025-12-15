@@ -10,7 +10,7 @@ Sistema de Vehículos Robot ESP8266 con ESP-NOW
 - ESP8266 Core instalado
 - 2x ESP8266 LOLIN D1 ESP-WROOM-02 con hardware conectado
 - Acceso a red WiFi 2.4GHz
-- Cable USB para programación
+- Cable microUSB para programación
 
 ---
 
