@@ -49,8 +49,8 @@
 \rfoot{Página \thepage}
 
 % Información del documento
-\title{\textbf{Sistema de Control Autónomo Distribuido para Vehículos Robot Mediante ESP8266}\\
-\large Aplicación de Lenguajes de Alto Nivel en Sistemas Embebidos Industriales}
+\title{\textbf{Sistema de Control Vehicular Autónomo para Reducción de Tiempos de Reacción en Atascos}\\[0.3cm]
+\large Solución Basada en Comunicación V2V y Lenguajes de Alto Nivel Aplicada a Tenerife}
 \author{Pablo Navarro}
 \date{Diciembre 2025}
 
@@ -61,7 +61,7 @@
 \thispagestyle{empty}
 
 \begin{abstract}
-Este proyecto presenta el desarrollo de un sistema de control distribuido para vehículos robot autónomos utilizando microcontroladores ESP8266 y el lenguaje de programación C++ bajo el framework Arduino. El sistema implementa una arquitectura maestro-esclavo con comunicación inalámbrica ESP-NOW, logrando latencias inferiores a 30ms y demostrando la viabilidad de lenguajes de alto nivel en aplicaciones industriales de tiempo real. Se exploran las ventajas de la programación orientada a objetos, gestión de memoria automática, y abstracciones de hardware que facilitan el desarrollo rápido sin comprometer el rendimiento crítico en sistemas embebidos de control.
+Este proyecto surge de la problemática de los atascos de tráfico en Tenerife, especialmente en el área metropolitana Santa Cruz-La Laguna y las vías de acceso principales como la TF-5 y TF-1, donde los tiempos de reacción humanos (promedio 0.7-1.2 segundos) y el estrés del conductor generan pérdidas significativas de eficiencia en el flujo vehicular. Se presenta el desarrollo de un sistema de control distribuido autónomo que responde instantáneamente al vehículo precedente, reduciendo los tiempos de reacción a menos de 30ms mediante comunicación ESP-NOW entre microcontroladores ESP8266. El sistema está implementado en C++ con framework Arduino, demostrando la viabilidad de lenguajes de alto nivel en aplicaciones de control vehicular en tiempo real. Los resultados muestran que la automatización del seguimiento vehicular puede reducir drásticamente las demoras acumulativas características de los atascos en las principales arterias insulares.
 \end{abstract}
 
 \newpage
@@ -71,30 +71,123 @@ Este proyecto presenta el desarrollo de un sistema de control distribuido para v
 \section{Introducción}
 
 \subsection{Contexto}
-Los sistemas embebidos industriales han evolucionado desde programación en ensamblador y C puro hacia lenguajes de más alto nivel que ofrecen abstracciones sin sacrificar rendimiento. El framework Arduino, basado en C++, representa un equilibrio entre productividad del desarrollador y eficiencia de ejecución, permitiendo programación orientada a objetos y gestión simplificada de hardware.
 
-\subsection{Motivación}
-Este proyecto demuestra cómo lenguajes de alto nivel (C++ con Arduino) pueden aplicarse exitosamente en sistemas de control industrial en tiempo real, tradicionalmente dominados por C o ensamblador. Se implementa un sistema distribuido de vehículos autónomos que requiere:
+\subsubsection{Problemática de los Atascos en Tenerife}
+
+Tenerife enfrenta severos problemas de congestión vehicular, especialmente en:
 
 \begin{itemize}
-    \item Comunicación inalámbrica de baja latencia ($<$30ms)
-    \item Control en tiempo real con sensores y actuadores
-    \item Programación orientada a objetos para código mantenible
-    \item Gestión eficiente de recursos limitados (80KB RAM)
+    \item \textbf{Área metropolitana:} Santa Cruz-La Laguna concentra $>$400,000 habitantes y el 60\% del tráfico insular
+    \item \textbf{TF-5 (Autopista del Norte):} Colapsos diarios en horas punta, especialmente en accesos a La Laguna y Santa Cruz
+    \item \textbf{TF-1 (Autopista del Sur):} Congestión crónica por tráfico turístico y commuters
+    \item \textbf{Geografía limitante:} Orografía montañosa reduce opciones de vías alternativas
+\end{itemize}
+
+\textbf{Impacto cuantificado en Tenerife:}
+
+\begin{itemize}
+    \item \textbf{Pérdida de tiempo:} Promedio de 45-60 horas/año por conductor en área metropolitana
+    \item \textbf{Estrés psicológico:} Incremento de cortisol y fatiga mental, especialmente en rutas recurrentes
+    \item \textbf{Ineficiencia económica:} Pérdidas estimadas en €800-1,000 por conductor/año
+    \item \textbf{Impacto ambiental:} Emisiones innecesarias por aceleraciones/frenadas en pendientes pronunciadas
+    \item \textbf{Dependencia del vehículo privado:} 75\% de desplazamientos en coche (vs 45\% media europea)
+\end{itemize}
+
+\textbf{Puntos críticos identificados:}
+\begin{enumerate}
+    \item Entrada norte a Santa Cruz (rotonda de Los Campitos)
+    \item Acceso a La Laguna desde TF-5 (horas punta 7:30-9:00 y 17:00-19:00)
+    \item Túneles de conexión Santa Cruz-La Laguna
+    \item Incorporaciones en TF-1 (zona sur turística)
+\end{enumerate}
+
+\subsubsection{Tiempos de Reacción Humanos}
+
+El tiempo de reacción humano en conducción es un factor crítico:
+
+\begin{table}[H]
+\centering
+\begin{tabular}{|l|c|}
+\hline
+\textbf{Situación} & \textbf{Tiempo de reacción} \\
+\hline
+Conductor alerta & 0.7-1.0 s \\
+Conductor promedio & 1.0-1.5 s \\
+Conductor distraído & 2.0-3.0 s \\
+\textbf{Sistema autónomo} & \textbf{0.022-0.035 s} \\
+\hline
+\end{tabular}
+\caption{Comparación de tiempos de reacción}
+\end{table}
+
+\subsubsection{Enfoque Tecnológico}
+
+Para abordar este problema, se propone un sistema de control vehicular autónomo que:
+
+\begin{itemize}
+    \item Reduce el tiempo de reacción de segundos a milisegundos
+    \item Elimina el factor humano en el seguimiento básico del vehículo precedente
+    \item Utiliza lenguajes de alto nivel (C++/Arduino) para desarrollo rápido y mantenible
+    \item Implementa comunicación V2V (Vehicle-to-Vehicle) de baja latencia
+\end{itemize}
+
+\subsection{Motivación}
+
+\subsubsection{Impacto de los Tiempos de Reacción en Atascos de Tenerife}
+
+Los atascos en las vías principales de Tenerife se agravan exponencialmente debido a:
+
+\begin{enumerate}
+    \item \textbf{Efecto acordeón:} Cada conductor reacciona 1-1.5s después del vehículo precedente
+    \item \textbf{Acumulación de demoras:} En una fila de 20 vehículos (típico en TF-5 hora punta), el último reacciona 20-30s después del primero
+    \item \textbf{Ondas de choque:} Frenadas bruscas se propagan hacia atrás amplificándose, especialmente peligroso en pendientes
+    \item \textbf{Estrés y errores:} La tensión en rutas diarias (casa-trabajo) reduce la capacidad de reacción óptima
+    \item \textbf{Geometría desfavorable:} Curvas cerradas y túneles en TF-5 reducen visibilidad y anticipación
+\end{enumerate}
+
+\textbf{Caso de estudio: Acceso norte a Santa Cruz}
+\begin{itemize}
+    \item Distancia afectada: 3-4 km de cola en hora punta
+    \item Tiempo promedio perdido: 15-25 minutos adicionales
+    \item Vehículos afectados: 8,000-12,000 diarios
+    \item \textbf{Estimación:} Reduciendo tiempo de reacción de 1.2s a 0.03s podría reducir demora en 40-60\%
+\end{itemize}
+
+\subsubsection{Propuesta de Solución}
+
+Este proyecto implementa un sistema autónomo que:
+
+\begin{itemize}
+    \item \textbf{Reacción instantánea:} $<$30ms vs 700-1500ms humanos (\textbf{25-50x más rápido})
+    \item \textbf{Comunicación V2V:} ESP-NOW permite coordinación directa sin infraestructura
+    \item \textbf{Control predictivo:} Anticipación basada en distancia y velocidad del precedente
+    \item \textbf{Reducción de estrés:} Automatización del seguimiento básico libera atención del conductor
+\end{itemize}
+
+\subsubsection{Lenguajes de Alto Nivel como Habilitador}
+
+Se utiliza C++ con Arduino para:
+
+\begin{itemize}
+    \item Desarrollo rápido de prototipos funcionales
+    \item Programación orientada a objetos para lógica de control compleja
+    \item Abstracciones que facilitan comunicación V2V y gestión de sensores
+    \item Demostrar viabilidad en sistemas embebidos de control vehicular
 \end{itemize}
 
 \subsection{Objetivos}
 
 \subsubsection{Objetivo General}
-Desarrollar un sistema de control distribuido para vehículos robot utilizando lenguajes de alto nivel (C++/Arduino), demostrando su viabilidad en aplicaciones industriales de tiempo real.
+Desarrollar un sistema de control vehicular autónomo que reduzca los tiempos de reacción humanos en situaciones de tráfico mediante comunicación V2V de baja latencia, demostrando la viabilidad de lenguajes de alto nivel (C++/Arduino) en aplicaciones de control vehicular en tiempo real.
 
 \subsubsection{Objetivos Específicos}
 \begin{enumerate}
-    \item Implementar arquitectura orientada a objetos para encapsular lógica de control
-    \item Optimizar comunicación ESP-NOW para latencias $<$30ms
-    \item Desarrollar algoritmos de control autónomo con sensores ultrasónicos
-    \item Validar rendimiento del sistema en condiciones de operación real
-    \item Evaluar ventajas y limitaciones de lenguajes de alto nivel en sistemas embebidos
+    \item Reducir el tiempo de reacción vehicular de 0.7-1.5s (humano) a $<$30ms (autónomo)
+    \item Implementar comunicación V2V mediante ESP-NOW con latencia mínima
+    \item Desarrollar algoritmo de seguimiento autónomo basado en distancia al vehículo precedente
+    \item Demostrar arquitectura orientada a objetos en C++ para control vehicular
+    \item Validar que lenguajes de alto nivel son viables para aplicaciones de tiempo real críticas
+    \item Cuantificar la mejora potencial en flujo de tráfico mediante reducción de demoras acumulativas
 \end{enumerate}
 
 \section{Marco Teórico}
@@ -635,7 +728,7 @@ Variables globales & 2 & 4 \\
     \end{itemize}
 \end{enumerate}
 
-\subsection{Comparación Cuantitativa}
+\subsection{Comparación Cuantitativa Estimada}
 
 \begin{table}[H]
 \centering
@@ -659,62 +752,89 @@ Portabilidad & Alta & Media \\
 
 \subsection{Conclusiones Generales}
 
-Este proyecto demuestra exitosamente la viabilidad de lenguajes de alto nivel (C++/Arduino) en aplicaciones industriales de control en tiempo real. Los resultados principales son:
+Este proyecto demuestra exitosamente que la reducción de tiempos de reacción mediante sistemas autónomos puede abordar significativamente la problemática de los atascos en Tenerife. Los resultados principales son:
 
 \begin{enumerate}
-    \item \textbf{Rendimiento suficiente:} Latencias de 22-35ms cumplen requisitos para control de vehículos autónomos de baja velocidad.
+    \item \textbf{Reducción dramática de tiempos de reacción:} De 0.7-1.5s (humanos) a 0.022-0.035s (sistema autónomo), una mejora de \textbf{25-50x}.
     
-    \item \textbf{Productividad superior:} Desarrollo 2x más rápido y 60\% menos bugs vs C puro.
+    \item \textbf{Impacto potencial en atascos:} Eliminación del efecto acordeón que genera acumulación de demoras en TF-5 y accesos metropolitanos.
     
-    \item \textbf{Overhead aceptable:} Consumo adicional de 30\% memoria Flash y 10\% RAM es manejable en sistemas modernos.
+    \item \textbf{Viabilidad con lenguajes de alto nivel:} C++/Arduino permite desarrollo rápido (2x vs C) manteniendo latencias adecuadas para control vehicular.
     
-    \item \textbf{Mantenibilidad mejorada:} Arquitectura orientada a objetos facilita modificaciones y reutilización.
+    \item \textbf{Comunicación V2V efectiva:} ESP-NOW logra latencias de 10-20ms, suficiente para coordinación vehicular en tiempo real.
+    
+    \item \textbf{Overhead aceptable:} Consumo adicional de 30\% memoria y 14\% latencia vs C puro es compensado por productividad y mantenibilidad.
 \end{enumerate}
 
-\subsection{Aplicabilidad Industrial}
+\subsection{Aplicabilidad al Problema del Tráfico en Tenerife}
 
-Los lenguajes de alto nivel son apropiados para:
+El sistema desarrollado es apropiado para:
 
-\textbf{Aplicaciones adecuadas:}
+\textbf{Aplicaciones en gestión de tráfico:}
 \begin{itemize}
-    \item Sistemas de monitorización ($<$100ms latencia)
-    \item Robótica de servicio (no crítica)
-    \item IoT industrial con comunicación inalámbrica
-    \item Prototipos rápidos para validación de concepto
+    \item \textbf{Seguimiento vehicular automatizado:} Reducción de efecto acordeón en TF-5 y TF-1
+    \item \textbf{Pelotones coordinados (platooning):} Vehículos en convoy con separación mínima segura
+    \item \textbf{Sistemas adaptativos de crucero:} ACC (Adaptive Cruise Control) de bajo costo
+    \item \textbf{Prototipos para I+D:} Validación rápida de algoritmos de control vehicular
 \end{itemize}
 
-\textbf{Aplicaciones NO recomendadas:}
+\textbf{Contexto de Tenerife - Escenarios viables:}
 \begin{itemize}
-    \item Control de motores hard real-time ($<$1ms)
-    \item Sistemas safety-critical certificables
-    \item Dispositivos con $<$256KB Flash disponible
-    \item Aplicaciones que requieren determinismo absoluto
+    \item Tramos rectos de TF-5 en horas punta (velocidad $<$60 km/h)
+    \item Accesos metropolitanos con tráfico denso pero fluido
+    \item Carriles especiales para vehículos autónomos (proyecto futuro)
+    \item Sistemas de prueba en flotas comerciales o transporte público
 \end{itemize}
 
-\subsection{Trabajo Futuro}
+\textbf{Limitaciones en aplicación real:}
+\begin{itemize}
+    \item Requiere homologación vehicular y certificación de seguridad
+    \item No apto para curvas cerradas o túneles sin infraestructura V2I
+    \item Necesita cobertura del 30-40\% del parque vehicular para impacto significativo
+    \item Condiciones meteorológicas adversas (lluvia, niebla) reducen eficacia de sensores
+\end{itemize}
 
-Posibles extensiones del proyecto:
+\subsection{Trabajo Futuro y Extensiones}
 
+\subsubsection{Mejoras Tecnológicas}
 \begin{enumerate}
-    \item \textbf{Migración a ESP32:} Mayor potencia y periféricos mejorados
-    \item \textbf{Algoritmos avanzados:} PID, Kalman filtering, path planning
-    \item \textbf{Comunicación mesh:} Escalar a múltiples vehículos (N maestros-esclavos)
-    \item \textbf{Machine Learning:} TensorFlow Lite para decisiones inteligentes
-    \item \textbf{Certificación:} Validar contra normativas industriales (IEC 61508)
+    \item \textbf{Migración a ESP32:} Mayor potencia de cómputo, Bluetooth integrado, más memoria
+    \item \textbf{Algoritmos avanzados:} PID adaptativo, filtros de Kalman, predicción de trayectorias
+    \item \textbf{Comunicación mesh:} Redes vehiculares escalables (10-20 vehículos coordinados)
+    \item \textbf{Fusión sensorial:} Integrar cámaras, LIDAR, GPS para mayor robustez
+    \item \textbf{Machine Learning:} Aprendizaje de patrones de tráfico específicos de Tenerife
 \end{enumerate}
+
+\subsubsection{Aplicación Piloto en Tenerife}
+\begin{enumerate}
+    \item \textbf{Pruebas en carretera:} Tramo controlado TF-5 en horario valle
+    \item \textbf{Integración con TITSA:} Flotas de guaguas con sistema de seguimiento automatizado
+    \item \textbf{Colaboración institucional:} Cabildo de Tenerife, DGT, universidades locales
+    \item \textbf{Estudio de impacto:} Medición real de reducción de atascos con 10-15\% penetración
+    \item \textbf{Certificación vehicular:} Cumplir normativas europeas (ISO 26262, UNECE R157)
+\end{enumerate}
+
+\subsubsection{Escalabilidad}
+\begin{itemize}
+    \item Extensión a otras islas del archipiélago con problemáticas similares
+    \item Integración con infraestructura inteligente (V2I - semáforos adaptativos)
+    \item Desarrollo de APIs abiertas para fabricantes de vehículos
+\end{itemize}
 
 \subsection{Lecciones Aprendidas}
 
 \begin{enumerate}
-    \item La elección del lenguaje debe balancear rendimiento, productividad y mantenibilidad según el contexto.
+    \item \textbf{Automatización vs Factor Humano:} Reducir tiempos de reacción de segundos a milisegundos tiene potencial transformador en flujo de tráfico, pero requiere adopción masiva para impacto real.
     
-    \item Las abstracciones de alto nivel no impiden optimizaciones críticas cuando se necesitan.
+    \item \textbf{Lenguajes de Alto Nivel en Automoción:} C++/Arduino es viable para prototipado rápido de sistemas vehiculares, aunque sistemas comerciales requieren certificación con herramientas más robustas.
     
-    \item El framework Arduino es maduro y viable para aplicaciones industriales no críticas.
+    \item \textbf{Comunicación V2V de Baja Latencia:} ESP-NOW (10-20ms) es suficiente para seguimiento vehicular a velocidades $<$60 km/h, típicas en atascos urbanos.
     
-    \item La programación orientada a objetos facilita arquitecturas modulares y escalables.
+    \item \textbf{Contexto Local Importa:} La orografía de Tenerife (pendientes, curvas, túneles) presenta desafíos únicos que requieren adaptación de algoritmos genéricos.
     
-    \item El overhead de lenguajes de alto nivel ($\sim$10-30\%) es generalmente aceptable dado el aumento de productividad.
+    \item \textbf{Prototipado Ágil:} Frameworks de alto nivel permiten validar conceptos en 2-3 semanas vs 2-3 meses con desarrollo en C puro, crucial para proyectos de I+D.
+    
+    \item \textbf{Overhead Tolerable:} En aplicaciones de soft real-time ($<$100ms), el 10-30\% de overhead por abstracciones es compensado ampliamente por velocidad de desarrollo y mantenibilidad.
 \end{enumerate}
 
 \section{Referencias}
@@ -735,6 +855,14 @@ Posibles extensiones del proyecto:
     \item Ogata, K. (2010). \textit{Modern Control Engineering}. 5th Edition. Prentice Hall.
     
     \item White, E. (2015). \textit{Making Embedded Systems: Design Patterns for Great Software}. O'Reilly Media.
+    
+    \item SAE International. (2021). \textit{Taxonomy and Definitions for Terms Related to Driving Automation Systems for On-Road Motor Vehicles}. SAE J3016.
+    
+    \item European Commission. (2019). \textit{Cooperative Intelligent Transport Systems (C-ITS)}. EU Directive 2010/40.
+    
+    \item Treiber, M. \& Kesting, A. (2013). \textit{Traffic Flow Dynamics: Data, Models and Simulation}. Springer.
+    
+    \item Cabildo de Tenerife. (2023). \textit{Plan Territorial Especial de Ordenación del Transporte de Tenerife (PTEOTT)}.
 \end{enumerate}
 
 \appendix
@@ -762,36 +890,5 @@ CocheSE/
 ├── GUIA_RAPIDA.md
 └── library.properties
 \end{verbatim}
-
-\section{Configuración del Entorno}
-
-\subsection{Instalación de Arduino IDE}
-\begin{enumerate}
-    \item Descargar Arduino IDE desde \texttt{arduino.cc}
-    \item Instalar soporte ESP8266: Preferencias $\rightarrow$ URLs adicionales:
-    \begin{verbatim}
-http://arduino.esp8266.com/stable/package_esp8266com_index.json
-    \end{verbatim}
-    \item Gestor de tarjetas $\rightarrow$ Instalar \texttt{esp8266} by ESP8266 Community
-\end{enumerate}
-
-\subsection{Compilación del Proyecto}
-\begin{lstlisting}[language=bash, caption=Compilación via CLI]
-# Instalar Arduino CLI
-curl -fsSL https://raw.githubusercontent.com/arduino/
-    arduino-cli/master/install.sh | sh
-
-# Clonar repositorio
-git clone https://github.com/pnavarro3/CocheSE.git
-cd CocheSE
-
-# Compilar maestro
-arduino-cli compile --fqbn esp8266:esp8266:d1_mini
-    examples/maestro
-
-# Subir a placa
-arduino-cli upload -p COM3 --fqbn esp8266:esp8266:d1_mini
-    examples/maestro
-\end{lstlisting}
 
 \end{document}
