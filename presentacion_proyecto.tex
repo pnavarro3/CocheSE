@@ -1,8 +1,11 @@
 \documentclass[aspectratio=169]{beamer}
 
 % Tema
-\usetheme{Madrid}
+\usetheme{Rochester}
 \usecolortheme{default}
+
+% Eliminar botones de navegación
+\setbeamertemplate{navigation symbols}{}
 
 % Paquetes
 \usepackage[utf8]{inputenc}
@@ -114,8 +117,8 @@
     
     \vspace{0.3cm}
     
-    \begin{alertblock}{Desafío}
-        ¿Pueden los lenguajes de alto nivel cumplir requisitos de \textbf{tiempo real} en sistemas embebidos industriales?
+    \begin{alertblock}{Motivación}
+        Los sistemas embebidos tradicionalmente requieren \textbf{C/ensamblador} por restricciones de recursos y tiempo. 
     \end{alertblock}
     
     \vspace{0.3cm}
@@ -227,43 +230,31 @@
 
 \begin{frame}[fragile]{Diseño Orientado a Objetos}
     \begin{columns}
-        \column{0.55\textwidth}
-        \begin{lstlisting}[basicstyle=\ttfamily\tiny]
+        \column{0.5\textwidth}
+        \begin{lstlisting}[basicstyle=\ttfamily\fontsize{5}{6}\selectfont, numbers=none]
 class Coche {
 private:
-    // Hardware
     int motorIzqA, motorIzqB;
     int motorDerA, motorDerB;
     int trigPin, echoPin;
     int lightPin, lucesPin;
-    
-    // Estado
     float distMin, distMax;
     int luzActual;
-    unsigned long ultimoCambio;
     
 public:
-    // Inicializacion
     void configurar(...);
     void inicializarESPNow();
-    void inicializarWebServer();
-    
-    // Control
     void moverMotores(int vel);
     void controlarDistancia();
     void controlarLuces();
-    
-    // Sensores
     float leerDistancia();
     int leerLuzAmbiente();
-    
-    // Comunicacion
     void enviarComando(...);
     void ejecutarComando(...);
 };
         \end{lstlisting}
         
-        \column{0.45\textwidth}
+        \column{0.5\textwidth}
         \textbf{Ventajas OOP:}
         \begin{itemize}
             \item \textbf{Encapsulación:} Estado protegido
@@ -275,7 +266,7 @@ public:
         \vspace{0.3cm}
         
         \begin{exampleblock}{Código Compartido}
-            Maestro y esclavo usan la misma clase \texttt{Coche}, solo difieren en configuración de pines
+            Maestro y esclavo usan la misma clase \texttt{Coche}, solo difieren en que partes de la clase se utilizan
         \end{exampleblock}
     \end{columns}
 \end{frame}
@@ -285,39 +276,10 @@ public:
 % ====================
 \section{Implementación}
 
-\begin{frame}[fragile]{Comunicación ESP-NOW Optimizada}
-    \begin{lstlisting}[basicstyle=\ttfamily\scriptsize]
-void Coche::enviarComandoESPNow(int luz, float dist) {
-    static unsigned long ultimoEnvio = 0;
-    unsigned long ahora = millis();
-    
-    // Throttling: 50 Hz (20ms minimo)
-    if (ahora - ultimoEnvio < 20) {
-        return;  // Evitar saturacion
-    }
-    
-    // Formatear mensaje: "luz=1,dist=25.5"
-    String mensaje = "luz=" + String(luz) + 
-                     ",dist=" + String(dist, 1);
-    
-    // Enviar via ESP-NOW
-    esp_now_send(macEsclavo, 
-                 (uint8_t*)mensaje.c_str(), 
-                 mensaje.length());
-    
-    ultimoEnvio = ahora;
-}
-    \end{lstlisting}
-    
-    \begin{block}{Características}
-        \textbf{Frecuencia:} 50 Hz • \textbf{Latencia:} 10-20ms • \textbf{Alcance:} 30-50m
-    \end{block}
-\end{frame}
-
-\begin{frame}[fragile]{Algoritmo de Control de Distancia}
+\begin{frame}[fragile]{Algoritmo de Control y Seguridad}
     \begin{columns}
-        \column{0.6\textwidth}
-        \begin{lstlisting}[basicstyle=\ttfamily\tiny]
+        \column{0.55\textwidth}
+        \begin{lstlisting}[basicstyle=\ttfamily\fontsize{6}{7}\selectfont]
 void Coche::controlarDistancia() {
     float d = leerDistancia();
     
@@ -344,7 +306,7 @@ void Coche::controlarDistancia() {
 }
         \end{lstlisting}
         
-        \column{0.4\textwidth}
+        \column{0.45\textwidth}
         \textbf{Control Proporcional:}
         
         \begin{align*}
@@ -352,53 +314,26 @@ void Coche::controlarDistancia() {
             v_{av} &= -(100 + (d-20) \times 7.75)
         \end{align*}
         
-        \vspace{0.3cm}
+        \vspace{0.2cm}
         
-        \begin{tikzpicture}[scale=0.6]
+        \begin{tikzpicture}[scale=0.55]
             \draw[->] (0,0) -- (5,0) node[right] {$d$ (cm)};
             \draw[->] (0,-2) -- (0,2) node[above] {$v$ (PWM)};
             
-            % Zona muerta
             \fill[green!20] (1.5,-0.1) rectangle (2,0.1);
-            \node at (1.75,-0.5) {\tiny zona};
-            \node at (1.75,-0.7) {\tiny muerta};
+            \node at (1.75,-0.5) {\tiny zona muerta};
             
-            % Retroceso
             \draw[blue, thick] (0,1.5) -- (1.5,0);
-            \node at (0.5,1.2) {\tiny retro};
+            \node at (0.5,1.2) {\tiny retroceso};
             
-            % Avance
             \draw[red, thick] (2,0) -- (4.5,-1.8);
             \node at (3.5,-1.2) {\tiny avance};
         \end{tikzpicture}
+        
+        \vspace{0.3cm}
+        
+        {\footnotesize \textit{* Esclavo verifica obstáculos $<$5cm antes de ejecutar cualquier comando}}
     \end{columns}
-\end{frame}
-
-\begin{frame}[fragile]{Sistema de Seguridad}
-    \begin{lstlisting}[basicstyle=\ttfamily\scriptsize]
-void Coche::ejecutarComandoRecibido(String comando) {
-    // SEGURIDAD: Verificar obstaculos antes de ejecutar
-    if (trigPin != -1 && echoPin != -1) {
-        float distSeguridad = leerDistancia();
-        if (distSeguridad < 5.0 && distSeguridad > 0) {
-            detenerMotores();  // PARADA DE EMERGENCIA
-            return;  // Ignorar comando
-        }
-    }
-    
-    // Parsear comando: "luz=1,dist=25.5"
-    int luzRecibida = parsearLuz(comando);
-    float distRecibida = parsearDistancia(comando);
-    
-    // Ejecutar control
-    controlarLucesAutomaticas(luzRecibida);
-    controlarDistancia();  // Usa distancia local del esclavo
-}
-    \end{lstlisting}
-    
-    \begin{alertblock}{Parada de Emergencia}
-        Esclavo verifica obstáculos $<$5cm \textbf{antes} de ejecutar cualquier comando
-    \end{alertblock}
 \end{frame}
 
 \begin{frame}[fragile]{Control de Luces con Histéresis}
@@ -565,145 +500,59 @@ void Coche::controlarLucesAutomaticas(
     \end{block}
 \end{frame}
 
-\begin{frame}{C++ vs C: Comparación}
-    \begin{table}
-        \centering
-        \begin{tabular}{|l|c|c|c|}
-            \hline
-            \textbf{Aspecto} & \textbf{C++/Arduino} & \textbf{C Puro} & \textbf{Diferencia} \\
-            \hline
-            Líneas de código & 450 & $\sim$800 & \textcolor{green}{-44\%} \\
-            Tiempo desarrollo & 2 semanas & 4-5 semanas & \textcolor{green}{-60\%} \\
-            Bugs encontrados & 8 & $\sim$20 & \textcolor{green}{-60\%} \\
-            \hline
-            Uso Flash & 310 KB & 180 KB & \textcolor{red}{+72\%} \\
-            Uso RAM & 42 KB & 32 KB & \textcolor{red}{+31\%} \\
-            Latencia & 28.5 ms & 25 ms & \textcolor{red}{+14\%} \\
-            \hline
-            Portabilidad & Alta & Media & \textcolor{green}{+++} \\
-            Mantenibilidad & Alta & Media & \textcolor{green}{+++} \\
-            \hline
-        \end{tabular}
-    \end{table}
-    
-    \vspace{0.3cm}
-    
-    \begin{alertblock}{Balance Productividad vs Recursos}
-        Mayor consumo de recursos compensado por desarrollo 2x más rápido y menos errores
-    \end{alertblock}
-\end{frame}
-
-% ====================
-% CONCLUSIONES
-% ====================
-\section{Conclusiones}
-
-\begin{frame}{Ventajas de Lenguajes de Alto Nivel}
+\begin{frame}{Lenguajes de Alto Nivel en Embebidos: Aplicaciones}
     \begin{columns}
         \column{0.5\textwidth}
-        \begin{block}{Productividad}
-            \begin{itemize}
-                \item Desarrollo 2x más rápido
-                \item 60\% menos bugs
-                \item Código 44\% más compacto
-                \item Curva de aprendizaje suave
-            \end{itemize}
-        \end{block}
-        
-        \begin{block}{Mantenibilidad}
-            \begin{itemize}
-                \item OOP: código organizado
-                \item Encapsulación: cambios locales
-                \item Reutilización: misma clase
-                \item Documentación implícita
-            \end{itemize}
-        \end{block}
-        
-        \column{0.5\textwidth}
-        \begin{block}{Abstracción}
-            \begin{itemize}
-                \item APIs intuitivas
-                \item Gestión automática de memoria
-                \item Bibliotecas multiplataforma
-                \item Menos errores de punteros
-            \end{itemize}
-        \end{block}
-        
-        \begin{exampleblock}{Portabilidad}
-            Código funciona en ESP8266, ESP32, Arduino sin cambios mayores
-        \end{exampleblock}
-    \end{columns}
-\end{frame}
-
-\begin{frame}{Limitaciones Encontradas}
-    \begin{columns}
-        \column{0.5\textwidth}
-        \begin{alertblock}{Overhead de Recursos}
-            \begin{itemize}
-                \item Framework: 250 KB Flash base
-                \item String: más RAM que char[]
-                \item Vtables: 4-8 bytes por objeto
-                \item 30\% más memoria vs C
-            \end{itemize}
-        \end{alertblock}
-        
-        \begin{alertblock}{Rendimiento}
-            \begin{itemize}
-                \item Abstracciones: 5-10\% overhead
-                \item digitalWrite() más lento
-                \item Virtualización: indirección
-                \item 14\% más latencia vs C
-            \end{itemize}
-        \end{alertblock}
-        
-        \column{0.5\textwidth}
-        \begin{alertblock}{Control Limitado}
-            \begin{itemize}
-                \item Acceso a bajo nivel complejo
-                \item Interrupciones menos flexibles
-                \item Optimizaciones ocultas
-                \item Determinismo no garantizado
-            \end{itemize}
-        \end{alertblock}
+        {\small
+        \textbf{Aplicaciones Industriales:}
+        \begin{itemize}
+            \item IoT y monitorización distribuida
+            \item Robótica colaborativa (AGVs, cobots)
+            \item Automatización flexible y adaptativa
+            \item Prototipado rápido de sistemas
+        \end{itemize}
+        }
         
         \vspace{0.3cm}
         
-        \begin{block}{Mitigación}
-            Combinar C++ para lógica y C para secciones críticas
-        \end{block}
-    \end{columns}
-\end{frame}
-
-\begin{frame}{Aplicabilidad Industrial}
-    \begin{columns}
-        \column{0.5\textwidth}
-        \textbf{✓ Aplicaciones Adecuadas:}
+        {\small
+        \textbf{Ventajas Clave:}
         \begin{itemize}
-            \item[$\checkmark$] Monitorización ($<$100ms)
-            \item[$\checkmark$] Robótica de servicio
-            \item[$\checkmark$] IoT industrial
-            \item[$\checkmark$] Sistemas distribuidos
-            \item[$\checkmark$] Prototipos rápidos
-            \item[$\checkmark$] HMI y dashboards
+            \item[\textcolor{green}{+}] Desarrollo 2x más rápido
+            \item[\textcolor{green}{+}] 60\% menos bugs
+            \item[\textcolor{green}{+}] Mantenibilidad con OOP
+            \item[\textcolor{red}{-}] +30\% recursos vs C
         \end{itemize}
+        }
         
         \column{0.5\textwidth}
-        \textbf{✗ Aplicaciones NO recomendadas:}
+        \textbf{Viabilidad Demostrada:}
+        
+        \vspace{0.2cm}
+        
+        {\small
+        \begin{exampleblock}{Este Proyecto}
+            Latencias 22-35ms: viable para soft real-time en IoT
+        \end{exampleblock}
+        
+        \vspace{0.2cm}
+        
+        \textbf{✓ Recomendado:}
         \begin{itemize}
-            \item[$\times$] Control hard real-time ($<$1ms)
-            \item[$\times$] Safety-critical certificable
-            \item[$\times$] Recursos $<$256KB Flash
-            \item[$\times$] Determinismo absoluto
-            \item[$\times$] Automotriz ASIL-D
-            \item[$\times$] Aviación DO-178C
+            \item Latencias $<$100ms
+            \item Recursos $>$256KB
+            \item Industria 4.0 y IoT
         \end{itemize}
+        
+        \vspace{0.15cm}
+        
+        \textbf{✗ No recomendado:}
+        \begin{itemize}
+            \item Hard real-time ($<$1ms)
+            \item Safety-critical
+        \end{itemize}
+        }
     \end{columns}
-    
-    \vspace{0.5cm}
-    
-    \begin{exampleblock}{Regla General}
-        Usar C++ para soft real-time ($>$10ms), C/ensamblador para hard real-time ($<$1ms)
-    \end{exampleblock}
 \end{frame}
 
 \begin{frame}{Conclusiones Finales}
@@ -726,46 +575,6 @@ void Coche::controlarLucesAutomaticas(
         
         \item \textbf{Limitaciones Claras:} No reemplaza C/ensamblador en aplicaciones safety-critical o hard real-time
     \end{enumerate}
-\end{frame}
-
-\begin{frame}{Trabajo Futuro}
-    \begin{columns}
-        \column{0.5\textwidth}
-        \textbf{Extensiones Técnicas:}
-        \begin{itemize}
-            \item Migrar a ESP32 (dual-core)
-            \item Algoritmos avanzados (PID, Kalman)
-            \item Comunicación mesh (N vehículos)
-            \item Machine Learning (TensorFlow Lite)
-        \end{itemize}
-        
-        \vspace{0.3cm}
-        
-        \textbf{Validación:}
-        \begin{itemize}
-            \item Certificación IEC 61508 (SIL 1-2)
-            \item Testing formal (unit, integration)
-            \item Análisis WCET (Worst-Case)
-        \end{itemize}
-        
-        \column{0.5\textwidth}
-        \textbf{Optimizaciones:}
-        \begin{itemize}
-            \item Híbrido C++/C para secciones críticas
-            \item RTOS (FreeRTOS) para scheduling
-            \item DMA para I/O sin polling
-            \item Análisis estático (MISRA C++)
-        \end{itemize}
-        
-        \vspace{0.3cm}
-        
-        \textbf{Investigación:}
-        \begin{itemize}
-            \item Benchmark detallado vs Rust
-            \item Patrones de diseño embebidos
-            \item Métricas de mantenibilidad
-        \end{itemize}
-    \end{columns}
 \end{frame}
 
 % Diapositiva final
