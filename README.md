@@ -189,11 +189,10 @@ Implementación exitosa de sistema de control distribuido con ESP-NOW, logrando:
 ---
 
 **Autor:** Pablo Navarro  
-**Asignatura:** Sistemas Empotrados  
+**Asignatura:** Sistemas Embebidos 
 **Fecha:** Diciembre 2025  
-**Licencia:** MIT
 
 ---
 
 **Documentación completa:** Ver `examples/GUIA_RAPIDA.md`  
-**Soporte:** https://github.com/pnavarro3/CocheSE/issues
+
