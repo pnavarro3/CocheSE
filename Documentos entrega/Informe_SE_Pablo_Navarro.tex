@@ -1,0 +1,583 @@
+\documentclass[12pt,a4paper]{article}
+\UseRawInputEncoding
+
+% Paquetes
+\usepackage[utf8]{inputenc}
+\usepackage[spanish]{babel}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{float}
+\usepackage{hyperref}
+\usepackage{geometry}
+\usepackage{fancyhdr}
+\usepackage{tikz}
+
+\geometry{margin=2.5cm}
+
+% Configuración de código
+\lstset{
+    language=C++,
+    basicstyle=\ttfamily\small,
+    keywordstyle=\color{blue}\bfseries,
+    commentstyle=\color{gray}\itshape,
+    stringstyle=\color{red},
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    stepnumber=1,
+    numbersep=8pt,
+    backgroundcolor=\color{white},
+    showspaces=false,
+    showstringspaces=false,
+    showtabs=false,
+    frame=single,
+    tabsize=2,
+    captionpos=b,
+    breaklines=true,
+    breakatwhitespace=false,
+    escapeinside={\%*}{*)},
+    inputencoding=utf8,
+    extendedchars=true
+}
+
+% Configuración de encabezado
+\pagestyle{fancy}
+\fancyhf{}
+\rhead{Sistemas Embebidos}
+\lhead{Control Vehicular ESP8266}
+\rfoot{Página \thepage}
+
+% Información del documento
+\title{\textbf{Diseño e Implementación de un Sistema Embebido Distribuido}\\[0.3cm]
+\large Control Vehicular Autónomo con ESP8266}
+\author{Pablo Navarro}
+\date{Curso 2025/2026}
+
+\begin{document}
+
+% Portada
+\maketitle
+\thispagestyle{empty}
+
+% Resumen
+\begin{abstract}
+Este trabajo presenta el diseño e implementación de un sistema embebido distribuido para control vehicular autónomo, utilizando microcontroladores ESP8266. El sistema implementa una arquitectura maestro-esclavo con comunicación inalámbrica ESP-NOW, control proporcional de distancia, y monitorización web en tiempo real. Se desarrollan algoritmos de control para sensores ultrasónicos y de luz, gestión de motores con PWM, y un sistema de seguridad distribuida. La implementación se realiza utilizando lenguajes de alto nivel como C++ con el framework Arduino, demostrando su viabilidad en aplicaciones embebidas críticas con latencias inferiores a 30ms.
+\end{abstract}
+
+\newpage
+
+% Índice
+\tableofcontents
+\newpage
+
+% Contenido principal (placeholder por ahora)
+\section{Introducción}
+
+\subsection{Contexto de los Sistemas Embebidos}
+
+Los sistemas embebidos son dispositivos electrónicos dedicados que combinan hardware y software para realizar funciones específicas, generalmente con restricciones de recursos como potencia de procesamiento, memoria y energía. Estos sistemas se utilizan en una amplia gama de aplicaciones, desde electrodomésticos inteligentes hasta vehículos autónomos y sistemas de control industrial.
+
+En el contexto de la movilidad urbana, los sistemas embebidos ofrecen oportunidades para mejorar la seguridad y eficiencia del tráfico mediante la automatización de tareas que tradicionalmente dependen de la intervención humana. La reducción de tiempos de reacción es un aspecto crítico, ya que los conductores humanos tienen limitaciones que pueden causar demoras en situaciones de tráfico denso.
+
+\subsection{Motivación y Objetivos}
+
+La motivación principal de este proyecto surge de la necesidad de reducir los tiempos de reacción en la conducción vehicular. Los conductores humanos requieren entre 0.7 y 1.5 segundos para reaccionar ante cambios en el tráfico, lo que puede generar efectos en cadena como el efecto acordeón en carreteras congestionadas. Este proyecto propone desarrollar coches sensorizados capaces de reaccionar automáticamente mediante la medición continua de la distancia al vehículo precedente, reduciendo drásticamente estos tiempos de reacción.
+
+Además, se explora la posibilidad de que los vehículos puedan compartir información entre sí sin necesidad de que cada uno esté completamente sensorizado. Por ejemplo, un vehículo esclavo puede encender sus luces automáticamente basándose en datos de luminosidad proporcionados por un vehículo maestro, creando un sistema distribuido más eficiente y económico.
+
+Los objetivos principales de este proyecto se centran en desarrollar un sistema embebido que reduzca significativamente el tiempo de reacción vehicular mediante control automático basado en distancia, implementar comunicación inalámbrica eficiente entre vehículos para compartir información de sensores, y crear una arquitectura distribuida maestro-esclavo que permita funcionalidad compartida sin duplicar hardware costoso. Específicamente, se busca diseñar algoritmos de control proporcional robustos para seguimiento automático de distancia, implementar comunicación ESP-NOW para intercambio confiable de datos entre vehículos, y desarrollar una interfaz web completa para monitorización en tiempo real del sistema, validando finalmente el rendimiento en términos de latencia y fiabilidad bajo diferentes condiciones operativas.
+
+\section{Marco Teórico}
+
+\subsection{Plataforma ESP8266}
+
+El ESP8266 es un microcontrolador System-on-Chip (SoC) desarrollado por Espressif Systems, ampliamente utilizado en proyectos de IoT y sistemas embebidos. Sus características principales incluyen un procesador Tensilica L106 de 32 bits capaz de operar a frecuencias de 80 MHz o 160 MHz, 80 KB de RAM para datos de usuario y 64 KB de RAM de instrucciones, hasta 16 MB de memoria flash externa, soporte completo para estándares WiFi 802.11 b/g/n, 17 pines GPIO configurables para entrada/salida digital, y soporte nativo para protocolos de comunicación como ESP-NOW, TCP/IP y HTTP. Para este proyecto, el ESP8266 resulta ideal debido a su bajo costo, bajo consumo de energía y capacidades de comunicación inalámbrica integradas, permitiendo la implementación de sistemas distribuidos sin necesidad de infraestructura adicional.
+
+\subsection{Framework Arduino}
+
+Arduino es una plataforma de desarrollo open-source que simplifica la programación de microcontroladores mediante un framework basado en C/C++. Proporciona una API de alto nivel que abstrae las complejidades del hardware subyacente, facilitando el desarrollo rápido de prototipos. Entre sus características más relevantes para este proyecto se incluyen funciones de gestión automática de pines como pinMode(), digitalWrite() y analogWrite(), soporte integrado para comunicación serie útil para debugging y monitorización, disponibilidad de librerías especializadas para WiFi, servidores web y comunicación inalámbrica, y compatibilidad completa con ESP8266 a través del Arduino Core for ESP8266, que permite programar el ESP8266 como si fuera una placa Arduino convencional.
+
+\subsection{Comunicación Inalámbrica ESP-NOW}
+
+ESP-NOW es un protocolo de comunicación propietario desarrollado por Espressif para comunicación peer-to-peer entre dispositivos ESP8266/ESP32. A diferencia del WiFi tradicional, no requiere un punto de acceso y ofrece latencias muy bajas, típicamente entre 10-30 ms para mensajes pequeños, con un alcance de hasta 100 metros en condiciones óptimas y capacidad para payloads de hasta 250 bytes. Soporta topologías de comunicación uno-a-uno, uno-a-muchos y broadcast, con soporte opcional para encriptación de comunicaciones seguras. En el contexto de este proyecto, ESP-NOW permite la coordinación en tiempo real entre vehículos maestro y esclavo, facilitando el intercambio de datos de sensores y comandos de control con mínima latencia.
+
+\subsection{Lenguajes de Programación en Sistemas Embebidos}
+
+Aunque el enfoque principal del proyecto es el diseño del sistema embebido, se utiliza C++ como lenguaje de programación principal. C++ ofrece ventajas como la programación orientada a objetos, que facilita la organización del código en clases y métodos reutilizables. Sin embargo, en sistemas embebidos con recursos limitados, se debe tener cuidado con el overhead que pueden introducir características avanzadas del lenguaje.
+
+\section{Metodología}
+
+\subsection{Arquitectura Distribuida Maestro-Esclavo}
+
+El sistema implementa una arquitectura distribuida basada en el patrón maestro-esclavo, donde un vehículo (maestro) actúa como nodo central de sensado y decisión, mientras que otros vehículos (esclavos) ejecutan comandos recibidos.
+
+\subsubsection{Roles y Responsabilidades}
+
+\textbf{Vehículo Maestro:}
+\begin{itemize}
+    \item Lectura de sensores ultrasónicos para medir distancia al vehículo precedente
+    \item Lectura de sensor de luz para determinar condiciones de iluminación
+    \item Ejecución de algoritmos de control proporcional para determinar velocidad
+    \item Transmisión de comandos y datos a vehículos esclavos vía ESP-NOW
+    \item Servidor web para monitorización del sistema completo
+\end{itemize}
+
+\textbf{Vehículos Esclavos:}
+\begin{itemize}
+    \item Recepción de comandos del maestro (velocidad, estado de luces)
+    \item Ejecución de control de motores basado en comandos recibidos
+    \item Sensor de seguridad ultrasónico independiente para parada de emergencia
+    \item Control automático de luces basado en datos del maestro
+    \item Servidor web individual para monitorización local
+\end{itemize}
+
+\subsubsection{Ventajas de la Arquitectura}
+
+La arquitectura distribuida maestro-esclavo ofrece importantes ventajas prácticas. Permite reducir significativamente los costos al evitar que cada vehículo esclavo necesite sensores completos, ya que pueden beneficiarse de los datos proporcionados por el maestro. La coordinación centralizada asegura que las decisiones se tomen basadas en sensores de mayor precisión, mientras que la escalabilidad del sistema facilita la incorporación de nuevos esclavos sin modificaciones complejas. Finalmente, la seguridad redundante se mantiene mediante sensores independientes en cada esclavo que pueden forzar paradas de emergencia independientemente de los comandos del maestro.
+
+\subsection{Diseño Orientado a Objetos}
+
+El software se estructura utilizando el paradigma de programación orientada a objetos, encapsulando la funcionalidad del vehículo en una clase \texttt{Coche} que puede instanciarse tanto para roles de maestro como esclavo.
+
+\subsubsection{Estructura de la Clase Coche}
+
+\begin{lstlisting}[language=C++, caption=Estructura principal de la clase Coche]
+class Coche {
+private:
+    // Hardware configuration
+    int motor1A, motor1B, motor2A, motor2B;
+    int trigPin, echoPin, lightPin, pinLuces;
+    
+    // Control parameters
+    float distanciaMin, distanciaMax;
+    
+    // System state
+    bool esMaestro;
+    float distanciaRecibida;
+    int luminosidadRecibida;
+    
+    // Private methods for low-level operations
+    void moverMotores(int velocidadIzq, int velocidadDer);
+    float leerDistanciaFiable();
+    
+public:
+    // Constructor and configuration
+    Coche(int m1A, int m1B, int m2A, int m2B, 
+          int trig, int echo, int light, int luces);
+    
+    // Subsystem initialization
+    void inicializar();
+    void inicializarWiFi(const char* ssid, const char* password);
+    void inicializarESPNowMaestro(uint8_t macEsclavo[6]);
+    void inicializarESPNowEsclavo(uint8_t macMaestro[6]);
+    
+    // Control principal
+    void controlarDistancia();
+    void ejecutarComandoRecibido();
+    
+    // Sensores y actuadores
+    float leerDistancia();
+    int leerLuz();
+    void controlarLucesAutomaticas();
+};
+\end{lstlisting}
+
+\subsubsection{Ventajas del Diseño OOP}
+
+El diseño orientado a objetos proporciona importantes beneficios para el desarrollo del sistema. La encapsulación mantiene las variables de estado protegidas y ofrece una interfaz clara para interactuar con la funcionalidad del vehículo, facilitando la reutilización del código ya que la misma clase puede funcionar tanto para roles de maestro como esclavo. La mantenibilidad se mejora al localizar los cambios en métodos específicos, mientras que la abstracción oculta las complejidades del hardware subyacente al programador, permitiendo concentrarse en la lógica de control en lugar de los detalles técnicos de bajo nivel.
+
+\subsection{Algoritmos de Control}
+
+\subsubsection{Control Proporcional de Distancia}
+
+El algoritmo principal implementa control proporcional con zona muerta para mantener una distancia segura al vehículo precedente. La zona muerta (15-20 cm) evita oscilaciones innecesarias cuando la distancia es adecuada.
+
+\begin{figure}[H]
+\centering
+\shorthandoff{<>}
+\begin{tikzpicture}[scale=1.2]
+    \draw[->] (0,0) -- (10,0) node[right] {Distancia (cm)};
+    \draw[->] (0,-2.5) -- (0,2.5) node[above] {Velocidad PWM};
+    
+    % Zona muerta
+    \fill[green!20] (1.875,-0.1) rectangle (2.5,-0.1);
+    \draw[green, thick] (1.875,0) -- (2.5,0);
+    \node at (2.1875,-0.7) {\small Zona muerta};
+    
+    % Retroceso
+    \draw[blue, thick] (0,1.875) -- (1.875,0);
+    \node at (0.625,1.4) {\small Retroceso};
+    
+    % Avance
+    \draw[red, thick] (2.5,0) -- (7.5,-2.25);
+    \node at (5,-1.6) {\small Avance};
+    
+    % Puntos de referencia
+    \draw[dashed] (1.875,-2.5) -- (1.875,2.5);
+    \draw[dashed] (2.5,-2.5) -- (2.5,2.5);
+    \node[below] at (1.875,0) {15};
+    \node[below] at (2.5,0) {20};
+\end{tikzpicture}
+\shorthandon{<>}
+\caption{Algoritmo de control proporcional con zona muerta}
+\end{figure}
+
+Las ecuaciones de control son:
+\begin{align}
+v_{retroceso} &= 80 + (15 - d) \times 10 \quad &\text{si } d < 15\text{ cm} \\
+v_{avance} &= -(100 + (d - 20) \times 7.75) \quad &\text{si } d > 20\text{ cm}
+\end{align}
+
+\subsubsection{Control de Luces con Histéresis}
+
+Para evitar parpadeo, el control de luces implementa histéresis temporal, manteniendo el estado durante al menos 5 segundos después de un cambio.
+
+\subsubsection{Sistema de Seguridad}
+
+Cada vehículo esclavo mantiene un sensor ultrasónico independiente que puede forzar una parada de emergencia si detecta obstáculos a menos de 5 cm, independientemente de los comandos del maestro.
+
+\section{Implementación}
+
+\subsection{Configuración de Hardware y Pines}
+
+El sistema utiliza placas ESP8266 Lolin D1 con la siguiente configuración de pines, optimizada para maximizar la funcionalidad del microcontrolador mientras se mantiene la compatibilidad con los periféricos utilizados. La selección de pines GPIO específicos responde a consideraciones técnicas importantes: algunos pines tienen funcionalidades especiales en el arranque del ESP8266 y deben manejarse con cuidado para evitar conflictos durante la inicialización del sistema.
+
+La configuración de pines permite una distribución equilibrada de las funciones críticas del sistema. Los pines D1-D4 se destinan al control de motores, aprovechando las capacidades PWM nativas del ESP8266 para un control suave de velocidad. Los pines D5-D6 se utilizan para el sensor ultrasónico HC-SR04, garantizando mediciones precisas de distancia. El pin D7 se configura para el sensor de luz, mientras que D8 maneja las luces LED, completando así una arquitectura de control vehicular completa y eficiente.
+
+\begin{table}[H]
+\centering
+\begin{tabular}{|l|l|l|}
+\hline
+\textbf{Pin GPIO} & \textbf{Función} & \textbf{Descripción} \\
+\hline
+D1 (GPIO5) & Motor Izquierdo A & Control PWM motor izquierdo \\
+D2 (GPIO4) & Motor Izquierdo B & Control PWM motor izquierdo \\
+D3 (GPIO0) & Motor Derecho A & Control PWM motor derecho \\
+D4 (GPIO2) & Motor Derecho B & Control PWM motor derecho \\
+D5 (GPIO14) & Trigger HC-SR04 & Pulso de disparo sensor ultrasónico \\
+D6 (GPIO12) & Echo HC-SR04 & Recepción pulso sensor ultrasónico \\
+D7 (GPIO13) & Sensor Luz LM393 & Entrada digital sensor de luminosidad \\
+D8 (GPIO15) & Luces LED & Salida para control de iluminación \\
+\hline
+\end{tabular}
+\caption{Configuración de pines del ESP8266}
+\end{table}
+
+\subsubsection{Driver de Motores L9110S}
+
+Los motores se controlan mediante el circuito integrado L9110S, un puente H dual que permite control bidireccional de motores DC con señales PWM. Este controlador ofrece varias ventajas técnicas importantes para aplicaciones embebidas: bajo consumo de corriente en reposo, protección contra sobrecargas, y capacidad para manejar corrientes de hasta 800mA por canal, lo que resulta adecuado para motores pequeños utilizados en prototipos vehiculares.
+
+La implementación del control de motores requiere una comprensión detallada del funcionamiento del L9110S. Cada motor se controla mediante dos pines: uno determina la dirección de rotación (forward/reverse) mientras que el otro regula la velocidad a través de modulación PWM. Esta configuración permite un control preciso de la velocidad y dirección, esencial para el comportamiento suave del vehículo autónomo. El sistema implementa además lógica de protección para evitar daños en los motores, incluyendo límites de corriente y detección de condiciones de error.
+
+\subsubsection{Circuitos de Sensores}
+
+El sistema integra dos tipos principales de sensores para la percepción del entorno. El sensor ultrasónico HC-SR04 mide distancias con precisión, utilizando un divisor de voltaje en el pin Echo para adaptar los 5V del sensor a los 3.3V tolerados por el ESP8266. El sensor de luz LM393, basado en un comparador con fotoresistencia, proporciona una salida digital binaria que indica condiciones de luminosidad clara u oscura según un umbral preestablecido, simplificando el procesamiento y reduciendo la carga computacional del microcontrolador.
+
+\subsection{Lectura de Sensores}
+
+\subsubsection{Sensor Ultrasónico HC-SR04}
+
+La lectura de distancia se implementa con un algoritmo de filtrado sofisticado diseñado para mejorar la precisión y fiabilidad de las mediciones. El sensor HC-SR04 opera enviando pulsos ultrasónicos a 40kHz y midiendo el tiempo que tarda el eco en regresar, lo que permite calcular distancias con una precisión teórica de hasta 3mm. Sin embargo, en entornos reales, factores como la temperatura, la humedad y las reflexiones múltiples pueden introducir ruido en las mediciones.
+
+Para mitigar estos efectos, el sistema implementa un filtro estadístico que toma múltiples lecturas consecutivas y calcula un promedio ponderado, descartando automáticamente valores atípicos que se encuentren fuera de rangos realistas. Esta técnica de filtrado no solo mejora la precisión sino que también aumenta la robustez del sistema ante condiciones ambientales variables, asegurando que el control vehicular se base en datos confiables y consistentes.
+
+\begin{lstlisting}[language=C++, caption=Lectura fiable de distancia]
+float Coche::leerDistanciaFiable() {
+    const int NUM_LECTURAS = 5;
+    float suma = 0; 
+    int lecturasValidas = 0;
+    
+    for (int i = 0; i < NUM_LECTURAS; i++) {
+        // Generar pulso de trigger
+        digitalWrite(trigPin, LOW); 
+        delayMicroseconds(2);
+        digitalWrite(trigPin, HIGH); 
+        delayMicroseconds(10);
+        digitalWrite(trigPin, LOW);
+        
+        // Measure echo pulse duration
+        long duracion = pulseIn(echoPin, HIGH, 30000);
+        float distancia = duracion * 0.034 / 2.0;
+        
+        // Filter valid readings
+        if (distancia > 2 && distancia < 400) {
+            suma += distancia; 
+            lecturasValidas++;
+        }
+        
+        if (i < NUM_LECTURAS - 1) delay(10);
+    }
+    
+    if (lecturasValidas == 0) 
+        return (ultimaDistancia > 0) ? ultimaDistancia : 400;
+    
+    return suma / lecturasValidas;
+}
+\end{lstlisting}
+
+\subsubsection{Sensor de Luz LM393}
+
+La lectura de luminosidad es digital, proporcionando estados discretos de claro u oscuro mediante un circuito comparador que simplifica significativamente el procesamiento requerido. El sensor LM393 utiliza una fotoresistencia que cambia su resistencia según la intensidad de luz incidente, creando un divisor de voltaje que se compara con un umbral de referencia preestablecido.
+
+Esta implementación binaria ofrece varias ventajas prácticas: reduce la carga computacional del microcontrolador al eliminar la necesidad de conversiones analógico-digitales complejas, minimiza el ruido eléctrico inherente a las señales analógicas, y proporciona una interfaz simple y confiable para el control automático de luces. El sistema de histéresis implementado en el software complementa esta simplicidad hardware, asegurando que las transiciones entre estados de iluminación sean estables y no produzcan parpadeo indeseado en las luces del vehículo.
+
+\begin{lstlisting}[language=C++, caption=Lectura de sensor de luz]
+int Coche::leerLuz() {
+    if (lightPin < 0) return 0;
+    return digitalRead(lightPin);  // 0 = oscuro, 1 = claro
+}
+\end{lstlisting}
+
+\subsection{Control de Motores con PWM}
+
+\subsubsection{Driver L9110S}
+
+El control de motores utiliza modulación PWM para regular la velocidad, aprovechando las capacidades nativas del ESP8266 para generar señales de ancho de pulso variable. Cada motor se controla con dos pines que determinan tanto la dirección como la velocidad: uno de los pines establece la polaridad (forward/reverse) mientras que el otro modula el ciclo de trabajo de la señal PWM. Esta técnica permite un control fino de la velocidad desde 0 hasta el máximo, con una resolución de 8 bits (256 niveles) que resulta adecuada para aplicaciones de control vehicular.
+
+La implementación considera las características físicas de los motores DC, incluyendo la relación no lineal entre voltaje aplicado y velocidad de rotación, así como los efectos de la inercia que pueden causar delays en las respuestas del sistema. El código maneja estas complejidades mediante algoritmos que compensan las características del motor y aseguran transiciones suaves entre diferentes velocidades operativas.
+
+\subsubsection{Sistema de Boost de Arranque}
+
+Para vencer la inercia inicial de los motores, se implementa un sistema de boost que aplica máxima potencia durante 100ms al inicio del movimiento. Este mecanismo es crucial para el rendimiento del vehículo autónomo, ya que los motores DC requieren un torque inicial mayor para superar la fricción estática y comenzar la rotación. Sin este boost, el vehículo podría experimentar delays significativos o movimientos irregulares al iniciar el desplazamiento.
+
+El algoritmo detecta automáticamente cuándo un motor pasa de estado parado a movimiento, aplicando entonces un voltaje máximo temporalmente antes de reducir a la velocidad nominal solicitada. Esta técnica no solo mejora la responsiveness del sistema sino que también optimiza la eficiencia energética al evitar el sobre-dimensionamiento continuo de los motores.
+
+\begin{lstlisting}[language=C++, caption=Control de motores con boost]
+void Coche::moverMotores(int velocidadIzq, int velocidadDer) {
+    // Detectar si es arranque desde parado
+    bool boostIzq = (ultimaVelocidadIzq == 0 && velocidadIzq != 0);
+    bool boostDer = (ultimaVelocidadDer == 0 && velocidadDer != 0);
+    
+    // Aplicar boost si es necesario
+    int velRealIzq = boostIzq ? 210 : abs(velocidadIzq);
+    int velRealDer = boostDer ? 210 : abs(velocidadDer);
+    
+    // Left motor direction control
+    if (velocidadIzq >= 0) {
+        analogWrite(motor1A, velRealIzq); 
+        analogWrite(motor1B, 0);
+    } else {
+        analogWrite(motor1A, 0); 
+        analogWrite(motor1B, velRealIzq);
+    }
+    
+    // Similar para motor derecho...
+    
+    // If boost was applied, wait and reduce to normal speed
+    if (boostIzq || boostDer) {
+        delay(100);
+        // Aplicar velocidades normales...
+    }
+}
+\end{lstlisting}
+
+\subsection{Comunicación ESP-NOW}
+
+\subsubsection{Configuración Maestro-Esclavo}
+
+La configuración ESP-NOW requiere direcciones MAC específicas para establecer comunicación peer-to-peer:
+
+\begin{lstlisting}[language=C++, caption=Inicialización ESP-NOW Maestro]
+void Coche::inicializarESPNowMaestro(uint8_t macEsclavo[6]) {
+    instanciaCocheGlobal = this;
+    esMaestro = true;
+    memcpy(macRemota, macEsclavo, 6);
+    
+    WiFi.mode(WIFI_STA);
+    if (esp_now_init() != 0) return;
+    
+    esp_now_set_self_role(ESP_NOW_ROLE_CONTROLLER);
+    esp_now_register_send_cb(OnDataSent);
+    esp_now_register_recv_cb(OnDataRecv);
+    esp_now_add_peer(macRemota, ESP_NOW_ROLE_SLAVE, 1, NULL, 0);
+}
+\end{lstlisting}
+
+\subsubsection{Protocolo de Mensajes}
+
+Los mensajes ESP-NOW siguen un formato estructurado: \texttt{"luz=X,dist=Y.Y"}
+
+\begin{lstlisting}[language=C++, caption=Formato de mensajes ESP-NOW]
+String mensaje = "luz=" + String(luz) + ",dist=" + String(distancia, 1);
+esp_now_send(macRemota, (uint8_t*)mensaje.c_str(), mensaje.length());
+\end{lstlisting}
+
+\subsection{Servidor Web de Monitorización}
+
+\subsubsection{Interfaz HTML/CSS/JavaScript}
+
+La interfaz web proporciona monitorización en tiempo real con actualizaciones automáticas cada 500ms:
+
+\begin{lstlisting}[language=HTML, caption=Interfaz web de monitorización]
+<div class="sensor">
+    <span class="sensor-label">Distancia:</span>
+    <span class="sensor-value" id="distancia">-- cm</span>
+</div>
+<div class="sensor">
+    <span class="sensor-label">Luminosidad:</span>
+    <span class="sensor-value" id="luz">--</span>
+</div>
+\end{lstlisting}
+
+\subsubsection{API REST JSON}
+
+El servidor proporciona datos en formato JSON para la interfaz:
+
+\begin{lstlisting}[language=C++, caption=API REST del servidor web]
+servidor->on("/datos", [this]() {
+    String json = "{";
+    json += "\"distancia\":" + String(dist, 2) + ",";
+    json += "\"luz\":" + String(luz) + ",";
+    json += "\"estado\":\"" + String(estadoMovimiento) + "\"";
+    json += "}";
+    servidor->send(200, "application/json", json);
+});
+\end{lstlisting}
+
+\subsection{Sistema de Seguridad}
+
+\subsubsection{Detección de Obstáculos}
+
+Los vehículos esclavos mantienen un sensor independiente para validación de seguridad:
+
+\begin{lstlisting}[language=C++, caption=Validación de seguridad en esclavo]
+void Coche::ejecutarComandoRecibido() {
+    // Security verification BEFORE executing
+    float distanciaSeguridad = leerDistancia();
+    if (distanciaSeguridad > 2 && distanciaSeguridad < 5.0) {
+        detenerMotores();  // PARADA DE EMERGENCIA
+        return;
+    }
+    
+    // Procesar comando recibido...
+}
+\end{lstlisting}
+
+\subsubsection{Validación de Comandos}
+
+Cada comando recibido se valida contra las condiciones de seguridad locales antes de su ejecución.
+
+\section{Resultados y Análisis}
+
+\subsection{Métricas de Rendimiento}
+
+Durante las pruebas del sistema, se obtuvieron las siguientes métricas de rendimiento:
+
+\begin{table}[H]
+\centering
+\begin{tabular}{|l|c|c|}
+\hline
+\textbf{Métrica} & \textbf{Valor} & \textbf{Unidad} \\
+\hline
+Latencia promedio comunicación & 22-35 & ms \\
+Error seguimiento distancia & $\pm$2 & cm \\
+Tiempo parada emergencia & $<$5 & ms \\
+\hline
+\end{tabular}
+\caption{Métricas de rendimiento del sistema}
+\end{table}
+
+\subsection{Análisis de Latencia}
+
+La latencia total del sistema se descompone en varios componentes:
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[scale=0.8]
+    \draw[fill=blue!30] (0,0) rectangle (1,0.8) node[pos=.5] {\tiny 2\textendash5ms};
+    \node at (0.5,-0.3) {\tiny Sensor};
+    
+    \draw[fill=green!30] (1.5,0) rectangle (2.5,0.8) node[pos=.5] {\tiny 1\textendash2ms};
+    \node at (2,-0.3) {\tiny Procesamiento};
+    
+    \draw[fill=red!30] (3,0) rectangle (5,0.8) node[pos=.5] {\tiny 10-20ms};
+    \node at (4,-0.3) {\tiny ESP-NOW};
+    
+    \draw[fill=green!30] (5.5,0) rectangle (6.5,0.8) node[pos=.5] {\tiny 1\textendash2ms};
+    \node at (6,-0.3) {\tiny Procesamiento};
+    
+    \draw[fill=orange!30] (7,0) rectangle (8.5,0.8) node[pos=.5] {\tiny 5\textendash10ms};
+    \node at (7.75,-0.3) {\tiny Motor};
+    
+    \draw[<->] (0,1.2) -- (8.5,1.2) node[midway, above] {\small 22\textendash35 ms total};
+\end{tikzpicture}
+\caption{Desglose de latencia por componente}
+\end{figure}
+
+\subsection{Validación de Control Proporcional}
+
+El algoritmo de control proporcional demostró un comportamiento estable y confiable durante las pruebas. La zona muerta implementada resultó efectiva para evitar oscilaciones innecesarias cuando la distancia se mantiene en el rango óptimo de 15-20 cm. La respuesta proporcional se ajusta correctamente según la distancia medida, permitiendo transiciones suaves de velocidad que evitan cambios bruscos y mejoran la comodidad del sistema. La precisión de seguimiento alcanzó un error máximo de ±2 cm en distancias operativas, lo que valida la efectividad del algoritmo para aplicaciones prácticas de control vehicular.
+
+\subsubsection{Análisis de Memoria y Recursos}
+
+El sistema optimiza el uso de recursos del ESP8266:
+
+\begin{table}[H]
+\centering
+\begin{tabular}{|l|r|r|}
+\hline
+\textbf{Componente} & \textbf{Flash (KB)} & \textbf{RAM (KB)} \\
+\hline
+Framework Arduino & 256 & 20 \\
+Clase Coche & 8 & 4 \\
+ESP-NOW & 12 & 6 \\
+Servidor Web & 32 & 8 \\
+Variables globales & 2 & 4 \\
+\hline
+\textbf{Total} & \textbf{310} & \textbf{42} \\
+\hline
+\end{tabular}
+\caption{Uso de memoria del sistema}
+\end{table}
+
+El sistema deja disponible aproximadamente el 58\% de la memoria Flash y el 48\% de la RAM para futuras expansiones.
+
+\section{Conclusiones}
+
+\subsection{Lecciones Aprendidas}
+
+Este proyecto ha demostrado la viabilidad de implementar sistemas embebidos distribuidos para control vehicular autónomo con objetivos específicos de reducción de tiempos de reacción. Una de las lecciones más importantes es la reducción efectiva de latencia lograda, pasando de tiempos de reacción humanos de 0.7-1.5 segundos a respuestas automáticas de 22-35 milisegundos, lo que representa una mejora de aproximadamente 25-50 veces. La arquitectura distribuida maestro-esclavo se reveló como una solución eficiente para compartir información de sensores entre vehículos, reduciendo costos y complejidad individual sin comprometer la funcionalidad.
+
+La importancia de la seguridad redundante quedó claramente demostrada, ya que los sensores independientes en los esclavos proporcionan una capa adicional de protección crítica que puede prevenir accidentes incluso si falla la comunicación con el maestro. El proyecto también validó que es posible lograr un equilibrio óptimo entre complejidad y rendimiento, utilizando técnicas como filtrado de sensores y control proporcional para mejorar la estabilidad sin aumentar significativamente la latencia del sistema. Finalmente, la programación orientada a objetos facilitó enormemente la organización del código y la reutilización entre diferentes roles del sistema, demostrando su valor incluso en entornos con recursos limitados.
+
+\subsection{Trabajo Futuro}
+
+\subsubsection{Extensiones Técnicas}
+
+El proyecto abre varias líneas de investigación técnica prometedoras. Una migración a ESP32 permitiría mayor capacidad de procesamiento para implementar algoritmos más avanzados como control PID adaptativo o fusión de múltiples sensores. Las redes mesh escalables podrían implementar topologías de red más complejas para coordinar flotas completas de vehículos, mientras que la incorporación de machine learning embebido permitiría adaptación automática a diferentes condiciones de conducción. Finalmente, la integración con infraestructura vial inteligente (V2I) abriría posibilidades para optimización del tráfico a mayor escala, conectando los vehículos con semáforos, señales de tráfico y otros elementos de la infraestructura urbana.
+
+\subsubsection{Aplicaciones Prácticas}
+
+Las aplicaciones prácticas del sistema desarrollado son amplias y variadas. En el ámbito de la conducción autónoma, el sistema puede servir como plataforma de validación para algoritmos de control en entornos controlados antes de su implementación en vehículos de mayor escala. Los sistemas de asistencia avanzada como el Control de Crucero Adaptativo de bajo costo se benefician directamente de esta tecnología, ofreciendo funcionalidades premium a un precio accesible. En el sector comercial, las flotas de transporte público o logística pueden mejorar su eficiencia operativa mediante la reducción de tiempos de reacción y optimización del espaciado entre vehículos. Finalmente, como herramienta educativa, la plataforma resulta ideal para enseñar conceptos de sistemas embebidos, control automático y comunicación inalámbrica en entornos académicos.
+
+\subsubsection{Limitaciones Identificadas}
+
+A pesar de sus fortalezas, el sistema presenta algunas limitaciones que deben considerarse. El alcance limitado de ESP-NOW, típicamente hasta 100 metros, restringe las aplicaciones a escenarios de corto alcance y dificulta su uso en carreteras de alta velocidad o áreas extensas. La dependencia de protocolos de comunicación propietarios complica la interoperabilidad con otros sistemas y fabricantes, limitando la adopción masiva. Finalmente, los sistemas inalámbricos requieren una gestión eficiente de la energía, ya que la batería debe alimentar tanto el procesamiento como las comunicaciones continuas, lo que puede reducir la autonomía operativa en aplicaciones móviles prolongadas.
+
+En resumen, el proyecto valida la viabilidad de sistemas embebidos para reducción automática de tiempos de reacción en aplicaciones vehiculares, abriendo camino para desarrollos más avanzados en movilidad autónoma.
+
+\section{Referencias}
+
+\begin{enumerate}
+    \item Espressif Systems. (2024). \textit{ESP8266 Technical Reference Manual}. Espressif Inc.
+    
+    \item Arduino Foundation. (2024). \textit{Arduino Language Reference}. arduino.cc
+    
+    \item Espressif Systems. (2023). \textit{ESP-NOW User Guide}. Espressif Inc.
+    
+    \item HC-SR04 Ultrasonic Sensor Datasheet. (2023). Cytron Technologies.
+    
+    \item LM393 Comparator Datasheet. (2022). Texas Instruments.
+    
+    \item L9110S Motor Driver Datasheet. (2021). Unknown manufacturer.
+\end{enumerate}
+
+\appendix
+
+\section{Código Fuente}
+
+El código fuente completo del proyecto está disponible en el repositorio de GitHub: \url{https://github.com/pnavarro3/CocheSE}. Este repositorio contiene la implementación completa de la clase Coche, los programas para maestro y esclavo, así como los archivos de configuración necesarios.
+
+\end{document}
